@@ -7,6 +7,8 @@ import (
 	"transaction-tracker/api/routes"
 
 	"transaction-tracker/googleapi"
+
+	_ "transaction-tracker/env"
 )
 
 func main() {
