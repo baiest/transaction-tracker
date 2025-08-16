@@ -2,12 +2,13 @@ package routes
 
 import (
 	"transaction-tracker/api/models"
-	"transaction-tracker/api/services"
+	services "transaction-tracker/api/services/google"
 )
 
 var (
 	googleRoutes = []models.Route{
-		{Endppoint: "/google/auth/generate",
+		{
+			Endppoint:   "/google/auth/generate",
 			Method:      models.POST,
 			HandlerFunc: services.GoogleGenerateAuthLink,
 			ApiVersion:  API_VERSION,
