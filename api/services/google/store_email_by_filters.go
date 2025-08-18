@@ -7,6 +7,7 @@ import (
 	"strings"
 	"transaction-tracker/api/models"
 	"transaction-tracker/api/services/transactions"
+	"transaction-tracker/database/mongo/schemas"
 	"transaction-tracker/googleapi"
 
 	"github.com/gin-gonic/gin"
@@ -73,43 +74,89 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 			return
 		}
 
+		notification, err := gmailClient.SaveNotification(c, strconv.FormatInt(int64(historyID), 10))
+		if err != err {
+			models.NewResponseInternalServerError(c)
+
+			return
+		}
+
+		if notification.Status != "pending" {
+			processNotificationMessages(c, gmailClient, notification)
+
+			return
+		}
+
 		var messages []map[string]interface{}
-		messageIDs := map[string]map[string]interface{}{}
+		messageIDs := map[string]bool{}
+
+		notificationStatus := "pending"
 
 		for _, h := range historyList.History {
+			stop := make(chan bool, len(h.Messages))
+
 			for _, m := range h.Messages {
-				if _, ok := messageIDs[m.Id]; ok {
+				if messageIDs[m.Id] {
+					stop <- true
 					continue
 				}
 
-				msg, err := gmailClient.Client.Users.Messages.Get("me", m.Id).Format("full").Do()
-				if err != nil {
-					continue
-				}
+				messageIDs[m.Id] = true
 
-				if !isMessageFiltered(msg) {
-					continue
-				}
+				notificationMessage := &schemas.Message{ID: m.Id, Status: "pending", NotificationID: notification.ID}
 
-				tr, err := parseEmailMessageToTransactionRequest(msg)
-				if err != nil {
-					continue
-				}
+				go func(messageID string, message *schemas.Message) {
+					defer func() {
+						stop <- true
+					}()
 
-				err = transactions.Create(tr)
-				if err != nil {
-					continue
-				}
+					msg, err := processMessageInTransactions(gmailClient, messageID)
+					if err != nil {
+						notificationStatus = "failure"
+						message.Status = "failure"
 
-				message := map[string]interface{}{
-					"id":      msg.Id,
-					"payload": msg.Payload,
-				}
+						gmailClient.SaveMessage(c, message)
 
-				messages = append(messages, message)
+						return
+					}
 
-				messageIDs[msg.Id] = message
+					if msg == nil {
+						return
+					}
+
+					notificationMessage.Status = "success"
+					err = gmailClient.SaveMessage(c, notificationMessage)
+					if err != nil {
+						notificationStatus = "failure"
+					}
+
+					messageResponse := map[string]interface{}{
+						"id":      msg.Id,
+						"payload": msg.Payload,
+					}
+
+					messages = append(messages, messageResponse)
+				}(m.Id, notificationMessage)
 			}
+
+			for range h.Messages {
+				<-stop
+			}
+
+			close(stop)
+		}
+
+		if notificationStatus == "pending" {
+			notificationStatus = "success"
+		}
+
+		notification.Status = notificationStatus
+
+		err = gmailClient.UpdateNotification(c, notification)
+		if err != nil {
+			models.NewResponseInternalServerError(c)
+
+			return
 		}
 
 		models.NewResponseOK(c, models.Response{
@@ -120,6 +167,117 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 			},
 		})
 	}
+}
+
+func processMessageInTransactions(gmailClient *googleapi.GmailService, messageID string) (*gmail.Message, error) {
+	msg, err := gmailClient.Client.Users.Messages.Get("me", messageID).Format("full").Do()
+	if err != nil {
+		return nil, nil
+	}
+
+	if !isMessageFiltered(msg) {
+		return nil, nil
+	}
+
+	tr, err := parseEmailMessageToTransactionRequest(msg)
+	if err != nil {
+		return nil, err
+	}
+
+	err = transactions.Create(tr)
+	if err != nil {
+		return nil, err
+	}
+
+	return msg, nil
+}
+
+func processNotificationMessages(c *gin.Context, gmailClient *googleapi.GmailService, notification *schemas.GamilNotification) {
+	if notification.Status == "success" {
+		models.NewResponseOK(c, models.Response{
+			Message: "notification is already saved",
+		})
+
+		return
+	}
+
+	if len(notification.Messages) == 0 {
+		models.NewResponseOK(c, models.Response{
+			Message: "no messages found for notification",
+		})
+
+		return
+	}
+
+	messageByID := map[string]bool{}
+	notificationStatus := "pending"
+
+	stop := make(chan bool, len(notification.Messages))
+
+	for _, message := range notification.Messages {
+		if messageByID[message.ID] {
+			continue
+		}
+
+		go func() {
+			defer func() {
+				stop <- true
+			}()
+
+			if message.Status == "success" {
+				return
+			}
+
+			messageByID[message.ID] = true
+
+			_, err := processMessageInTransactions(gmailClient, message.ID)
+			if err != nil {
+				notificationStatus = "failure"
+				message.Status = "failure"
+
+				updateErr := gmailClient.UpdateMessage(c, message)
+				if updateErr != nil {
+					notificationStatus = "failure"
+				}
+
+				return
+			}
+
+			message.Status = "success"
+
+			updateErr := gmailClient.UpdateMessage(c, message)
+			if updateErr != nil {
+				notificationStatus = "failure"
+			}
+		}()
+	}
+
+	for range notification.Messages {
+		<-stop
+	}
+
+	close(stop)
+
+	if notificationStatus == "pending" {
+		notificationStatus = "success"
+	}
+
+	notification.Status = notificationStatus
+
+	updateNotificationErr := gmailClient.UpdateNotification(c, notification)
+	if updateNotificationErr != nil {
+		models.NewResponseInternalServerError(c)
+
+		return
+	}
+
+	models.NewResponseOK(c, models.Response{
+		Message: "messages",
+		Data: map[string]any{
+			"history_id": notification.ID,
+			"messages":   notification.Messages,
+		},
+	})
 }
 
 // Review this
