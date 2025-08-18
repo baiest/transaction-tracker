@@ -16,8 +16,10 @@ type CollectionName string
 const (
 	defaultMongoURI = "mongodb://localhost:27017"
 
-	TRANSACTIONS    DatabaseName   = "transactions"
-	GOOGLE_ACCOUNTS CollectionName = "google_accounts"
+	TRANSACTIONS        DatabaseName   = "transactions"
+	GOOGLE_ACCOUNTS     CollectionName = "google_accounts"
+	GMAIL_NOTIFICATIONS CollectionName = "gmail_notifications"
+	GMAIL_MESSAGES      CollectionName = "gmail_messages"
 )
 
 type MongoClient struct {
