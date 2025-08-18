@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"transaction-tracker/database/mongo/schemas"
+	"transaction-tracker/googleapi/repository"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
+	"google.golang.org/api/option"
 )
 
 var (
@@ -18,8 +21,10 @@ var (
 
 type GoogleClient struct {
 	token        *oauth2.Token
+	email        string
 	Config       *oauth2.Config
 	gmailService *GmailService
+	repository   *repository.GoogleAccountsRepository
 }
 
 func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
@@ -38,7 +43,12 @@ func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
 		Endpoint: google.Endpoint,
 	}
 
-	return &GoogleClient{Config: config}, nil
+	repository, err := repository.NeGoogleAccountsRepository(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GoogleClient{Config: config, repository: repository}, nil
 }
 
 func (g *GoogleClient) SaveTokenAndInitServices(ctx context.Context, code string) error {
@@ -48,6 +58,23 @@ func (g *GoogleClient) SaveTokenAndInitServices(ctx context.Context, code string
 	}
 
 	g.token = token
+
+	email, err := g.GetUserEmail(ctx)
+	if err != nil {
+		return err
+	}
+
+	g.email = email
+
+	googleAccount := &schemas.GoogleAccount{
+		ID:    email,
+		Token: token,
+	}
+
+	err = g.repository.SaveToken(ctx, googleAccount)
+	if err != nil {
+		return err
+	}
 
 	service, err := NewGmailService(ctx, g)
 	if err != nil {
@@ -63,10 +90,50 @@ func (g *GoogleClient) GetAuthURL() string {
 	return g.Config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 }
 
-func (g *GoogleClient) GmailService() (*GmailService, error) {
+// GetUserEmail fetches the authenticated user's email address using the Gmail API profile endpoint.
+func (g *GoogleClient) GetUserEmail(ctx context.Context) (string, error) {
+	if g.token == nil {
+		return "", fmt.Errorf("missing oauth token")
+	}
+
+	httpClient := g.Config.Client(ctx, g.token)
+	service, err := gmail.NewService(ctx, option.WithHTTPClient(httpClient))
+	if err != nil {
+		return "", fmt.Errorf("error creating gmail service: %w", err)
+	}
+
+	profile, err := service.Users.GetProfile("me").Do()
+	if err != nil {
+		return "", fmt.Errorf("error getting gmail profile: %w", err)
+	}
+
+	return profile.EmailAddress, nil
+}
+
+func (g *GoogleClient) GmailService(ctx context.Context) (*GmailService, error) {
+	if g.email != "" {
+		account, err := g.repository.GetTokenByEmail(ctx, g.email)
+		if err != nil {
+			return nil, err
+		}
+
+		g.token = account.Token
+
+		service, err := NewGmailService(ctx, g)
+		if err != nil {
+			return nil, fmt.Errorf("Error creating gmail service: %v", err)
+		}
+
+		g.gmailService = service
+	}
+
 	if g.gmailService == nil {
 		return nil, fmt.Errorf("gmail service not inicialized")
 	}
 
 	return g.gmailService, nil
+}
+
+func (g *GoogleClient) SetEmail(email string) {
+	g.email = email
 }
