@@ -22,7 +22,7 @@ var (
 	emailFilters = []EmailFilter{
 		{
 			Email:   "banco_davivienda@davivienda.com",
-			Subject: "test",
+			Subject: "davivienda",
 		},
 	}
 )
@@ -136,11 +136,17 @@ func isMessageFiltered(msg *gmail.Message) bool {
 }
 
 func parseEmailMessageToTransactionRequest(msg *gmail.Message) (*models.TransactionRequest, error) {
-	if len(msg.Payload.Parts) == 0 {
-		return nil, fmt.Errorf("missing body")
+	body := ""
+
+	if len(msg.Payload.Parts) > 0 {
+		body = msg.Payload.Parts[0].Body.Data
+	} else {
+		body = msg.Payload.Body.Data
 	}
 
-	body := msg.Payload.Parts[0].Body.Data
+	if body == "" {
+		return nil, fmt.Errorf("missing body")
+	}
 
 	decodedBody, err := base64.StdEncoding.DecodeString(body)
 	if err != nil {
