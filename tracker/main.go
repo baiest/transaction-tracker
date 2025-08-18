@@ -36,17 +36,12 @@ var (
 )
 
 func storeEmail(message *Message, maxRetries int) error {
-	data, err := json.Marshal(message)
-	if err != nil {
-		return fmt.Errorf("Error marshalling message: %v", err)
-	}
-
-	req, err := http.NewRequest("POST", baseURL+fmt.Sprintf(urlStoreEmail, message.HistoryID), bytes.NewBuffer(data))
+	formData := fmt.Sprintf("email=%s", message.EmailAdress)
+	req, err := http.NewRequest("POST", baseURL+fmt.Sprintf(urlStoreEmail, message.HistoryID), bytes.NewBufferString(formData))
 	if err != nil {
 		return fmt.Errorf("Error creating request: %v", err)
 	}
-
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := shared.Client.Do(req)
 	if err != nil {
