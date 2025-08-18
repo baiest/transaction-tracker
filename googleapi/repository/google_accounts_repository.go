@@ -2,7 +2,6 @@ package repository
 
 import (
 	"errors"
-	"time"
 	"transaction-tracker/database/mongo/schemas"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,13 +9,6 @@ import (
 
 	databaseMongo "transaction-tracker/database/mongo"
 )
-
-type Context interface {
-	Deadline() (deadline time.Time, ok bool)
-	Done() <-chan struct{}
-	Err() error
-	Value(key any) any
-}
 
 // IGoogleAccountsRepository defines the operations to create and query Google tokens.
 type IGoogleAccountsRepository interface {
@@ -69,6 +61,7 @@ func (r *GoogleAccountsRepository) GetTokenByEmail(ctx Context, emailAddress str
 	if errors.Is(result.Err(), mongo.ErrNoDocuments) {
 		return nil, ErrTokenNotFound
 	}
+
 	if result.Err() != nil {
 		return nil, result.Err()
 	}
