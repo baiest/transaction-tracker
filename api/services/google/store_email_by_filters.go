@@ -29,6 +29,15 @@ var (
 
 func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		email := c.PostForm("email")
+		if email == "" {
+			models.NewResponseInvalidRequest(c, models.Response{
+				Message: "email is required in x-www-form-urlencoded body",
+			})
+
+			return
+		}
+
 		historyID, err := strconv.ParseUint(c.Param("historyID"), 10, 64)
 		if err != nil {
 			models.NewResponseInvalidRequest(c, models.Response{
@@ -38,7 +47,9 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 			return
 		}
 
-		gmailClient, err := gClient.GmailService()
+		gClient.SetEmail(email)
+
+		gmailClient, err := gClient.GmailService(c)
 		if err != nil {
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: err.Error(),

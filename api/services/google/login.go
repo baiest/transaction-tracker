@@ -20,7 +20,7 @@ func GoogleLogin(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 		projectID := "transaction-tracker-2473"
 		topicName := fmt.Sprintf("projects/%s/topics/gmail-notifications", projectID)
 
-		gmailService, err := gClient.GmailService()
+		gmailService, err := gClient.GmailService(c)
 		if err != nil {
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: err.Error(),

@@ -10,7 +10,17 @@ import (
 
 func GoogleDeleteWath(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		gmailService, err := gClient.GmailService()
+		email := c.PostForm("email")
+		if email == "" {
+			models.NewResponseInvalidRequest(c, models.Response{
+				Message: "email is required in x-www-form-urlencoded body",
+			})
+			return
+		}
+
+		gClient.SetEmail(email)
+
+		gmailService, err := gClient.GmailService(c)
 		if err != nil {
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: err.Error(),
