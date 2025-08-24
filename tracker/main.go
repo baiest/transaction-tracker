@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"time"
 
 	_ "transaction-tracker/env"
 	"transaction-tracker/googleapi"
+	"transaction-tracker/logger"
+	loggerModels "transaction-tracker/logger/models"
 	"transaction-tracker/shared"
 )
 
@@ -26,21 +27,33 @@ type Message struct {
 	HistoryID   uint64 `json:"historyId"`
 }
 
+func (m *Message) LogProperties() map[string]string {
+	return map[string]string{
+		"email":      m.EmailAdress,
+		"history_id": fmt.Sprintf("%d", m.HistoryID),
+	}
+}
+
 const (
 	STORE_EMAIL_MAX_RETRIES = 5
 )
 
 var (
 	baseURL       = os.Getenv("BASE_TRANSACTION_URL")
+	timeToRetry   = 5 * time.Second
 	urlStoreEmail = "/api/v1/gmail/emails/%d/save"
+
+	log *loggerModels.Logger
 )
 
 func storeEmail(message *Message, maxRetries int) error {
 	formData := fmt.Sprintf("email=%s", message.EmailAdress)
+
 	req, err := http.NewRequest("POST", baseURL+fmt.Sprintf(urlStoreEmail, message.HistoryID), bytes.NewBufferString(formData))
 	if err != nil {
 		return fmt.Errorf("Error creating request: %v", err)
 	}
+
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := shared.Client.Do(req)
@@ -51,7 +64,8 @@ func storeEmail(message *Message, maxRetries int) error {
 	defer res.Body.Close()
 
 	if res.StatusCode == 404 && maxRetries > 0 {
-		time.Sleep(5 * time.Second)
+		time.Sleep(timeToRetry)
+
 		return storeEmail(message, maxRetries-1)
 	}
 
@@ -62,40 +76,87 @@ func storeEmail(message *Message, maxRetries int) error {
 	return nil
 }
 
+func handleSubscription(ctx context.Context, msg []byte) error {
+	message := &Message{}
+	err := json.Unmarshal(msg, message)
+	if err != nil {
+		return err
+	}
+
+	log.Info(loggerModels.LogProperties{
+		Event: "message_received",
+		AdditionalParams: []loggerModels.Properties{
+			message,
+		},
+	})
+
+	err = storeEmail(message, STORE_EMAIL_MAX_RETRIES)
+	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "error_storing_email",
+			Error: err,
+			AdditionalParams: []loggerModels.Properties{
+				message,
+			},
+		})
+
+		return nil
+	}
+
+	log.Info(loggerModels.LogProperties{
+		Event: "message_stored",
+		AdditionalParams: []loggerModels.Properties{
+			message,
+		},
+	})
+
+	return nil
+}
+
 func main() {
 	ctx := context.Background()
 
+	var err error
+
+	log, err = logger.GetLogger(ctx, "transaction-tracker")
+	if err != nil {
+		fmt.Printf("Error getting logger: %v\n", err)
+		return
+	}
+
 	if urlStoreEmail == "" {
-		log.Fatal("missing url to store the email")
+		log.Error(loggerModels.LogProperties{
+			Event: "missing_url_store_email",
+			AdditionalParams: []loggerModels.Properties{
+				logger.MapToProperties(map[string]string{
+					"base_url": baseURL,
+				}),
+			},
+		})
 	}
 
 	pubsubService, err := googleapi.NewGooglePubSub(ctx, projectID)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(loggerModels.LogProperties{
+			Event: "failed_to_initialize_pubsub",
+			Error: err,
+		})
 	}
 
-	err = pubsubService.Subscribe(ctx, subscription, func(ctx context.Context, msg []byte) error {
-		message := &Message{}
-		err := json.Unmarshal(msg, message)
-		if err != nil {
-			return err
-		}
-
-		log.Printf("event: message_received, email: %s, history_id: %d", message.EmailAdress, message.HistoryID)
-
-		err = storeEmail(message, STORE_EMAIL_MAX_RETRIES)
-		if err != nil {
-			log.Print("Error storing email:", err)
-
-			return nil
-		}
-
-		log.Printf("event: message_stored, email: %s, history_id: %d", message.EmailAdress, message.HistoryID)
-
-		return nil
+	log.Info(loggerModels.LogProperties{
+		Event: "pubsub_subscribed",
+		AdditionalParams: []loggerModels.Properties{
+			logger.MapToProperties(map[string]string{
+				"subscription": subscription,
+			}),
+		},
 	})
 
+	err = pubsubService.Subscribe(ctx, subscription, handleSubscription)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(loggerModels.LogProperties{
+			Event: "failed_to_subscribe_pubsub",
+			Error: err,
+		})
 	}
 }
