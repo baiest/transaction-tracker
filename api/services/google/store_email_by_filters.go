@@ -9,6 +9,8 @@ import (
 	"transaction-tracker/api/services/transactions"
 	"transaction-tracker/database/mongo/schemas"
 	"transaction-tracker/googleapi"
+	"transaction-tracker/logger"
+	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/gmail/v1"
@@ -25,13 +27,33 @@ var (
 			Email:   "banco_davivienda@davivienda.com",
 			Subject: "davivienda",
 		},
+		{
+			Email:   "juanballesteros2001@gmail.com",
+			Subject: "davivienda",
+		},
 	}
+
+	log *loggerModels.Logger
 )
 
 func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		log, err := logger.GetLogger(c, "transaction-tracker")
+		if err != nil {
+			models.NewResponseInvalidRequest(c, models.Response{
+				Message: fmt.Sprintf("logger not init: %s", err.Error),
+			})
+
+			return
+		}
+
 		email := c.PostForm("email")
 		if email == "" {
+			log.Info(loggerModels.LogProperties{
+				Event: "missing_email",
+			})
+
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: "email is required in x-www-form-urlencoded body",
 			})
@@ -41,6 +63,11 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 		historyID, err := strconv.ParseUint(c.Param("historyID"), 10, 64)
 		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "invalid_history_id",
+				Error: err,
+			})
+
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: "invalid historyID",
 			})
@@ -52,6 +79,11 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 		gmailClient, err := gClient.GmailService(c)
 		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "init_gmail_client_failed",
+				Error: err,
+			})
+
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: err.Error(),
 			})
@@ -62,11 +94,22 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 		historyList, err := historyListCall.Do()
 		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "get_history_failed",
+				Error: err,
+			})
+
 			models.NewResponseInternalServerError(c)
+
 			return
 		}
 
 		if len(historyList.History) == 0 {
+			log.Error(loggerModels.LogProperties{
+				Event: "history_empty",
+				Error: err,
+			})
+
 			models.NewResponseNotFoud(c, models.Response{
 				Message: "no emails found for given historyID",
 			})
@@ -76,13 +119,18 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 		notification, err := gmailClient.SaveNotification(c, strconv.FormatInt(int64(historyID), 10))
 		if err != err {
+			log.Error(loggerModels.LogProperties{
+				Event: "save_notification_failed",
+				Error: err,
+			})
+
 			models.NewResponseInternalServerError(c)
 
 			return
 		}
 
 		if notification.Status != "pending" {
-			processNotificationMessages(c, gmailClient, notification)
+			processNotificationMessages(c, log, gmailClient, notification)
 
 			return
 		}
@@ -112,10 +160,21 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 					msg, err := processMessageInTransactions(gmailClient, messageID)
 					if err != nil {
+						log.Error(loggerModels.LogProperties{
+							Event: "process_message_failed",
+							Error: err,
+						})
+
 						notificationStatus = "failure"
 						message.Status = "failure"
 
-						gmailClient.SaveMessage(c, message)
+						err := gmailClient.SaveMessage(c, message)
+						if err != nil {
+							log.Error(loggerModels.LogProperties{
+								Event: "save_message_status_failure_failed",
+								Error: err,
+							})
+						}
 
 						return
 					}
@@ -127,6 +186,11 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 					notificationMessage.Status = "success"
 					err = gmailClient.SaveMessage(c, notificationMessage)
 					if err != nil {
+						log.Error(loggerModels.LogProperties{
+							Event: "process_message_status_success_failed",
+							Error: err,
+						})
+
 						notificationStatus = "failure"
 					}
 
@@ -154,6 +218,11 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 		err = gmailClient.UpdateNotification(c, notification)
 		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "processupdate_notification_failed",
+				Error: err,
+			})
+
 			models.NewResponseInternalServerError(c)
 
 			return
@@ -192,7 +261,7 @@ func processMessageInTransactions(gmailClient *googleapi.GmailService, messageID
 	return msg, nil
 }
 
-func processNotificationMessages(c *gin.Context, gmailClient *googleapi.GmailService, notification *schemas.GamilNotification) {
+func processNotificationMessages(c *gin.Context, log *loggerModels.Logger, gmailClient *googleapi.GmailService, notification *schemas.GamilNotification) {
 	if notification.Status == "success" {
 		models.NewResponseOK(c, models.Response{
 			Message: "notification is already saved",
@@ -202,6 +271,10 @@ func processNotificationMessages(c *gin.Context, gmailClient *googleapi.GmailSer
 	}
 
 	if len(notification.Messages) == 0 {
+		log.Info(loggerModels.LogProperties{
+			Event: "notifications_empty",
+		})
+
 		models.NewResponseOK(c, models.Response{
 			Message: "no messages found for notification",
 		})
@@ -232,11 +305,21 @@ func processNotificationMessages(c *gin.Context, gmailClient *googleapi.GmailSer
 
 			_, err := processMessageInTransactions(gmailClient, message.ID)
 			if err != nil {
+				log.Error(loggerModels.LogProperties{
+					Event: "process_message_failed",
+					Error: err,
+				})
+
 				notificationStatus = "failure"
 				message.Status = "failure"
 
 				updateErr := gmailClient.UpdateMessage(c, message)
 				if updateErr != nil {
+					log.Error(loggerModels.LogProperties{
+						Event: "update_message_status_failure_failed",
+						Error: err,
+					})
+
 					notificationStatus = "failure"
 				}
 
@@ -247,6 +330,11 @@ func processNotificationMessages(c *gin.Context, gmailClient *googleapi.GmailSer
 
 			updateErr := gmailClient.UpdateMessage(c, message)
 			if updateErr != nil {
+				log.Error(loggerModels.LogProperties{
+					Event: "update_message_status_succes_failed",
+					Error: updateErr,
+				})
+
 				notificationStatus = "failure"
 			}
 		}()
@@ -266,6 +354,11 @@ func processNotificationMessages(c *gin.Context, gmailClient *googleapi.GmailSer
 
 	updateNotificationErr := gmailClient.UpdateNotification(c, notification)
 	if updateNotificationErr != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "update_notification_failed",
+			Error: updateNotificationErr,
+		})
+
 		models.NewResponseInternalServerError(c)
 
 		return

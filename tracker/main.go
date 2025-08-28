@@ -121,6 +121,7 @@ func main() {
 	log, err = logger.GetLogger(ctx, "transaction-tracker")
 	if err != nil {
 		fmt.Printf("Error getting logger: %v\n", err)
+
 		return
 	}
 
@@ -133,6 +134,8 @@ func main() {
 				}),
 			},
 		})
+
+		return
 	}
 
 	pubsubService, err := googleapi.NewGooglePubSub(ctx, projectID)
@@ -141,6 +144,8 @@ func main() {
 			Event: "failed_to_initialize_pubsub",
 			Error: err,
 		})
+
+		return
 	}
 
 	log.Info(loggerModels.LogProperties{
