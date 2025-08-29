@@ -261,7 +261,7 @@ func processMessageInTransactions(gmailClient *googleapi.GmailService, messageID
 	return msg, nil
 }
 
-func processNotificationMessages(c *gin.Context, log *loggerModels.Logger, gmailClient *googleapi.GmailService, notification *schemas.GamilNotification) {
+func processNotificationMessages(c *gin.Context, log *loggerModels.Logger, gmailClient *googleapi.GmailService, notification *schemas.GmailNotification) {
 	if notification.Status == "success" {
 		models.NewResponseOK(c, models.Response{
 			Message: "notification is already saved",

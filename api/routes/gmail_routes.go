@@ -14,15 +14,21 @@ var (
 			ApiVersion:  API_VERSION,
 		},
 		{
-			Endppoint:   "/gmail/emails/:historyID",
+			Endppoint:   "/gmail/emails/histories/:historyID",
 			Method:      models.GET,
 			HandlerFunc: services.GetEmailByHistoryID,
 			ApiVersion:  API_VERSION,
 		},
 		{
-			Endppoint:   "/gmail/emails/:historyID/save",
+			Endppoint:   "/gmail/emails/histories/:historyID/save",
 			Method:      models.POST,
 			HandlerFunc: services.StoreEmailByFilters,
+			ApiVersion:  API_VERSION,
+		},
+		{
+			Endppoint:   "/gmail/emails/extracts",
+			Method:      models.GET,
+			HandlerFunc: services.StoreBankExtracts,
 			ApiVersion:  API_VERSION,
 		},
 	}
