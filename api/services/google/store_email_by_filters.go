@@ -42,7 +42,7 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 		log, err := logger.GetLogger(c, "transaction-tracker")
 		if err != nil {
 			models.NewResponseInvalidRequest(c, models.Response{
-				Message: fmt.Sprintf("logger not init: %s", err.Error),
+				Message: fmt.Sprintf("logger not init: %s", err.Error()),
 			})
 
 			return

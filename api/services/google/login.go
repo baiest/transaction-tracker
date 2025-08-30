@@ -4,14 +4,30 @@ import (
 	"fmt"
 	"transaction-tracker/api/models"
 	"transaction-tracker/googleapi"
+	"transaction-tracker/logger"
+	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 func GoogleLogin(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		err := gClient.SaveTokenAndInitServices(c, c.Query("code"))
+		log, err := logger.GetLogger(c, "google-login")
 		if err != nil {
+			models.NewResponseInvalidRequest(c, models.Response{
+				Message: fmt.Sprintf("logger not init: %s", err.Error()),
+			})
+
+			return
+		}
+
+		err = gClient.SaveTokenAndInitServices(c, c.Query("code"))
+		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "save_token_failed",
+				Error: err,
+			})
+
 			models.NewResponseInternalServerError(c)
 
 			return
@@ -22,6 +38,11 @@ func GoogleLogin(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 		gmailService, err := gClient.GmailService(c)
 		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "init_gmail_failed",
+				Error: err,
+			})
+
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: err.Error(),
 			})
@@ -31,6 +52,11 @@ func GoogleLogin(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 		historyID, expirationTime, err := gmailService.CreateWatch(c, topicName)
 		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "create_watch_failed",
+				Error: err,
+			})
+
 			models.NewResponseInternalServerError(c)
 
 			return

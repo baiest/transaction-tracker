@@ -61,6 +61,7 @@ func StoreBankExtracts(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: err.Error(),
 			})
+
 			return
 		}
 
