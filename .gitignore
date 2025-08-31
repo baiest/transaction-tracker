@@ -5,4 +5,4 @@ terraform.tfvars
 client_secret.json
 .env
 terraform.tfstate.backup
-files
+files/

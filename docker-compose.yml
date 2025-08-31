@@ -22,8 +22,8 @@ services:
     depends_on:
       - mongo
     environment:
-      GOOGLE_CLIENT_ID: 1021634824995-94s7l3qg7kgj8ad00jcuap74d13geasp.apps.googleusercontent.com
-      GOOGLE_CLIENT_SECRET: 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
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL}
 
       MONGO_URI: ${MONGO_URI}
