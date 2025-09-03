@@ -27,7 +27,7 @@ var (
 		},
 		{
 			Endppoint:   "/gmail/emails/extracts",
-			Method:      models.GET,
+			Method:      models.POST,
 			HandlerFunc: services.StoreBankExtracts,
 			ApiVersion:  API_VERSION,
 		},

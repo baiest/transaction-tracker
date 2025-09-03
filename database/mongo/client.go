@@ -21,6 +21,8 @@ const (
 	GMAIL_EXTRACTS      CollectionName = "gmail_extracts"
 	GMAIL_NOTIFICATIONS CollectionName = "gmail_notifications"
 	GMAIL_MESSAGES      CollectionName = "gmail_messages"
+
+	MOVEMENTS CollectionName = "movements"
 )
 
 type MongoClient struct {
