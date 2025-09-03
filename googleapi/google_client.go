@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"transaction-tracker/database/mongo/schemas"
-	"transaction-tracker/googleapi/repository"
+	"transaction-tracker/googleapi/repositories"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -24,7 +24,7 @@ type GoogleClient struct {
 	email        string
 	Config       *oauth2.Config
 	gmailService *GmailService
-	repository   *repository.GoogleAccountsRepository
+	repository   *repositories.GoogleAccountsRepository
 }
 
 func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
@@ -43,7 +43,7 @@ func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
 		Endpoint: google.Endpoint,
 	}
 
-	repository, err := repository.NeGoogleAccountsRepository(ctx)
+	repository, err := repositories.NeGoogleAccountsRepository(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -136,4 +136,8 @@ func (g *GoogleClient) GmailService(ctx context.Context) (*GmailService, error) 
 
 func (g *GoogleClient) SetEmail(email string) {
 	g.email = email
+}
+
+func (g *GoogleClient) Email() string {
+	return g.email
 }

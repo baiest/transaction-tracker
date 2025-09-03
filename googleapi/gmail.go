@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 	"transaction-tracker/database/mongo/schemas"
-	"transaction-tracker/googleapi/repository"
+	"transaction-tracker/googleapi/repositories"
 
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
@@ -37,9 +37,9 @@ var (
 type GmailService struct {
 	Client                  *gmail.Service
 	email                   string
-	gmailRepository         *repository.GmailNotificationsRepository
-	gmailMessageRepository  *repository.GmailMessageRepository
-	gmailExtractsRepository *repository.GmailExtractsRepository
+	gmailRepository         *repositories.GmailNotificationsRepository
+	gmailMessageRepository  *repositories.GmailMessageRepository
+	gmailExtractsRepository *repositories.GmailExtractsRepository
 }
 
 func NewGmailService(ctx context.Context, gClient *GoogleClient) (*GmailService, error) {
@@ -50,17 +50,17 @@ func NewGmailService(ctx context.Context, gClient *GoogleClient) (*GmailService,
 		return nil, fmt.Errorf("Error creating gmail service: %v", err)
 	}
 
-	notificationRepo, err := repository.NewGmailNotificationsRepository(ctx)
+	notificationRepo, err := repositories.NewGmailNotificationsRepository(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	messageRepo, err := repository.NewGmailMessageRepository(ctx)
+	messageRepo, err := repositories.NewGmailMessageRepository(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	extractRepo, err := repository.NewGmailExtractsRepository(ctx)
+	extractRepo, err := repositories.NewGmailExtractsRepository(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (gmailService *GmailService) SaveNotification(ctx context.Context, notifica
 	}
 
 	err := gmailService.gmailRepository.SaveNotification(ctx, notification)
-	if errors.Is(err, repository.ErrNotificationAlreadyExists) {
+	if errors.Is(err, repositories.ErrNotificationAlreadyExists) {
 		notification, err := gmailService.gmailRepository.GetNotificationByID(ctx, notification.ID)
 		if err != nil {
 			return nil, err
@@ -169,7 +169,7 @@ func (gmailService *GmailService) DownloadAttachments(ctx context.Context, messa
 	var err error
 
 	extract, err = gmailService.gmailExtractsRepository.GetExtract(ctx, messageID)
-	if err != nil && !errors.Is(err, repository.ErrExtractNotFound) {
+	if err != nil && !errors.Is(err, repositories.ErrExtractNotFound) {
 		return nil, fmt.Errorf("error getting extract: %w", err)
 	}
 
