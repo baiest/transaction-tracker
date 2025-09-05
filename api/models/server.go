@@ -23,7 +23,7 @@ func (s *Server) AddRoutes(routes []Route, gClient *googleapi.GoogleClient) {
 	api := s.engine.Group("/api")
 
 	for _, r := range routes {
-		api.Group(r.ApiVersion).Handle(string(r.Method), r.Endppoint, r.HandlerFunc(gClient))
+		api.Group(r.ApiVersion).Handle(string(r.Method), r.Endpoint, r.HandlerFunc(gClient))
 	}
 }
 

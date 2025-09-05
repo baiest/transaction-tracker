@@ -13,6 +13,7 @@ func Routes() []models.Route {
 
 	routes = append(routes, googleRoutes...)
 	routes = append(routes, gmailRoutes...)
+	routes = append(routes, movementsRoutes...)
 
 	return routes
 }

@@ -16,7 +16,7 @@ const (
 
 type Route struct {
 	Method      Method
-	Endppoint   string
+	Endpoint    string
 	HandlerFunc func(*googleapi.GoogleClient) gin.HandlerFunc
 	ApiVersion  string
 }

@@ -8,13 +8,13 @@ import (
 var (
 	googleRoutes = []models.Route{
 		{
-			Endppoint:   "/google/auth/generate",
+			Endpoint:    "/google/auth/generate",
 			Method:      models.POST,
 			HandlerFunc: services.GoogleGenerateAuthLink,
 			ApiVersion:  API_VERSION,
 		},
 		{
-			Endppoint:   "/google/auth/save",
+			Endpoint:    "/google/auth/save",
 			Method:      models.GET,
 			HandlerFunc: services.GoogleLogin,
 			ApiVersion:  API_VERSION,

@@ -46,6 +46,19 @@ func extractTextFromPDF(pathPDF string, password string) string {
 
 func (e *DaviviendaExtract) GetMovements(pathPDF string) []*Movement {
 	text := currentTextExtractor(pathPDF, e.Password)
+	fmt.Println("Extracted text length:", len(text))
+
+	reYear := regexp.MustCompile(`INFORME DEL MES:.*?/(\d{4})`)
+	yearMatch := reYear.FindStringSubmatch(text)
+	year := int64(0)
+	var err error
+
+	if len(yearMatch) > 1 {
+		year, err = strconv.ParseInt(yearMatch[1], 10, 64)
+		if err != nil {
+			year = 0
+		}
+	}
 
 	regex := regexp.MustCompile(`(?m)^(\d{2}\s+\d{2})\s+\$\s*([\d,]+\.\d{2})([+-])\s+(\d{4})\s+(.+)$`)
 	matches := regex.FindAllStringSubmatch(text, -1)
@@ -53,9 +66,10 @@ func (e *DaviviendaExtract) GetMovements(pathPDF string) []*Movement {
 	movements := []*Movement{}
 
 	for _, m := range matches {
+		fmt.Println("Match:", m)
 		dayAndMonth := strings.Split(m[1], " ")
 
-		date, err := time.Parse("2006-01-02", fmt.Sprintf("2021-%s-%s", dayAndMonth[1], dayAndMonth[0]))
+		date, err := time.Parse("2006-01-02", fmt.Sprintf("%d-%s-%s", year, dayAndMonth[1], dayAndMonth[0]))
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -75,6 +89,8 @@ func (e *DaviviendaExtract) GetMovements(pathPDF string) []*Movement {
 			Type:       "unknown",
 			Detail:     ToValidUTF8(strings.TrimSpace(m[5])),
 		}
+
+		fmt.Println("Movement:", mov)
 
 		movements = append(movements, mov)
 	}
