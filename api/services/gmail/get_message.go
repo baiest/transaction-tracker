@@ -1,36 +1,41 @@
-package movements
+package gmail
 
 import (
-	"strconv"
 	"transaction-tracker/api/models"
 	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetMovements() gin.HandlerFunc {
+func GetMessage() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		log := c.MustGet("logger").(*loggerModels.Logger)
 
-		movementsService, err := NewMovementsService(c)
-		if err != nil {
-			log.Error(loggerModels.LogProperties{
-				Event: "init_movements_service_failed",
-				Error: err,
+		messageID := c.Param("messageID")
+		if messageID == "" {
+			models.NewResponseInvalidRequest(c, models.Response{
+				Message: "missing message id",
 			})
 
 			return
 		}
 
-		page, err := strconv.ParseInt(c.Query("page"), 10, 64)
-		if err != nil || page == 0 {
-			page = 1
-		}
-
-		movements, totalPages, err := movementsService.GetMovements(c, page)
+		gmailService, err := NewGmailService(c)
 		if err != nil {
 			log.Error(loggerModels.LogProperties{
-				Event: "get_movements_failed",
+				Event: "init_gmail_service_failed",
+				Error: err,
+			})
+
+			models.NewResponseInternalServerError(c)
+
+			return
+		}
+
+		message, err := gmailService.GetMessage(c, messageID)
+		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "get_message_failed",
 				Error: err,
 			})
 
@@ -40,7 +45,7 @@ func GetMovements() gin.HandlerFunc {
 		}
 
 		models.NewResponseOK(c, models.Response{
-			Data: &models.MovementsListResponse{TotalPages: totalPages, Page: page, Movements: movements},
+			Data: message,
 		})
 	}
 }

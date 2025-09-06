@@ -2,13 +2,16 @@ package google
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"transaction-tracker/api/models"
-	"transaction-tracker/api/services/transactions"
+	movementsServices "transaction-tracker/api/services/movements"
 	"transaction-tracker/database/mongo/schemas"
 	"transaction-tracker/googleapi"
+	"transaction-tracker/googleapi/repositories"
+	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
@@ -93,7 +96,7 @@ func StoreEmailByFilters() gin.HandlerFunc {
 
 		if len(historyList.History) == 0 {
 			log.Error(loggerModels.LogProperties{
-				Event: "history_empty",
+				Event: "history_id_not_found",
 				Error: err,
 			})
 
@@ -138,6 +141,23 @@ func StoreEmailByFilters() gin.HandlerFunc {
 
 				messageIDs[m.Id] = true
 
+				message, err := gmailClient.GetMessage(c, m.Id)
+				if err != nil && !errors.Is(err, repositories.ErrMessageNotFound) {
+					log.Error(loggerModels.LogProperties{
+						Event: "get_message_by_id_failed",
+						Error: err,
+					})
+
+					models.NewResponseInternalServerError(c)
+
+					return
+				}
+
+				if message != nil {
+					stop <- true
+					continue
+				}
+
 				notificationMessage := &schemas.Message{ID: m.Id, Status: "pending", NotificationID: notification.ID}
 
 				go func(messageID string, message *schemas.Message) {
@@ -145,7 +165,7 @@ func StoreEmailByFilters() gin.HandlerFunc {
 						stop <- true
 					}()
 
-					msg, err := processMessageInTransactions(gmailClient, messageID)
+					msg, err := processMessageInTransactions(c, gmailClient, messageID)
 					if err != nil {
 						log.Error(loggerModels.LogProperties{
 							Event: "process_message_failed",
@@ -167,8 +187,26 @@ func StoreEmailByFilters() gin.HandlerFunc {
 					}
 
 					if msg == nil {
+						log.Info(loggerModels.LogProperties{
+							Event: "message_filtered",
+							AdditionalParams: []loggerModels.Properties{
+								logger.MapToProperties(map[string]string{
+									"message_id": messageID,
+								}),
+							},
+						})
+
 						return
 					}
+
+					log.Info(loggerModels.LogProperties{
+						Event: "movement_created",
+						AdditionalParams: []loggerModels.Properties{
+							logger.MapToProperties(map[string]string{
+								"message_id": messageID,
+							}),
+						},
+					})
 
 					notificationMessage.Status = "success"
 					err = gmailClient.SaveMessage(c, notificationMessage)
@@ -216,7 +254,6 @@ func StoreEmailByFilters() gin.HandlerFunc {
 		}
 
 		models.NewResponseOK(c, models.Response{
-			Message: "messages",
 			Data: map[string]any{
 				"history_id": historyID,
 				"messages":   messages,
@@ -225,7 +262,7 @@ func StoreEmailByFilters() gin.HandlerFunc {
 	}
 }
 
-func processMessageInTransactions(gmailClient *googleapi.GmailService, messageID string) (*gmail.Message, error) {
+func processMessageInTransactions(c *gin.Context, gmailClient *googleapi.GmailService, messageID string) (*gmail.Message, error) {
 	msg, err := gmailClient.Client.Users.Messages.Get("me", messageID).Format("full").Do()
 	if err != nil {
 		return nil, nil
@@ -240,7 +277,24 @@ func processMessageInTransactions(gmailClient *googleapi.GmailService, messageID
 		return nil, err
 	}
 
-	err = transactions.Create(tr)
+	account := c.MustGet("account").(*models.Account)
+
+	movement := schemas.NewMovement(
+		account.Email,
+		msg.Id,
+		tr.Date,
+		float64(tr.Value),
+		float64(tr.Value) < 0,
+		tr.Type,
+		"",
+	)
+
+	movementsService, err := movementsServices.NewMovementsService(c)
+	if err != nil {
+		return nil, err
+	}
+
+	err = movementsService.CreateMovement(c, movement)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +344,7 @@ func processNotificationMessages(c *gin.Context, log *loggerModels.Logger, gmail
 
 			messageByID[message.ID] = true
 
-			_, err := processMessageInTransactions(gmailClient, message.ID)
+			_, err := processMessageInTransactions(c, gmailClient, message.ID)
 			if err != nil {
 				log.Error(loggerModels.LogProperties{
 					Event: "process_message_failed",
@@ -352,7 +406,6 @@ func processNotificationMessages(c *gin.Context, log *loggerModels.Logger, gmail
 	}
 
 	models.NewResponseOK(c, models.Response{
-		Message: "messages",
 		Data: map[string]any{
 			"history_id": notification.ID,
 			"messages":   notification.Messages,

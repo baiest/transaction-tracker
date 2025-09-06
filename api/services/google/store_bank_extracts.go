@@ -1,6 +1,7 @@
 package google
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"transaction-tracker/api/models"
@@ -8,6 +9,7 @@ import (
 	"transaction-tracker/database/mongo/schemas"
 	documentextractor "transaction-tracker/document-extractor"
 	"transaction-tracker/googleapi"
+	"transaction-tracker/googleapi/repositories"
 	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 
@@ -92,8 +94,37 @@ func downloadAttachments(c *gin.Context, log *loggerModels.Logger, gmailClient *
 		go func(msg *gmail.Message) {
 			defer func() { messages <- true }()
 
+			message := &schemas.Message{
+				ID:             msg.Id,
+				NotificationID: "",
+				Status:         "pending",
+			}
+
+			err := gmailClient.SaveMessage(c, message)
+			if errors.Is(err, repositories.ErrMessageAlreadyExists) {
+				return
+			}
+
+			if err != nil {
+				log.Error(loggerModels.LogProperties{
+					Event: "save_message_failed",
+					Error: err,
+				})
+
+				return
+			}
+
 			extract, err := gmailClient.DownloadAttachments(c, msg.Id)
 			if err != nil {
+				message.Status = "failed"
+				err = gmailClient.UpdateMessage(c, message)
+				if err != nil {
+					log.Error(loggerModels.LogProperties{
+						Event: "update_message_failed",
+						Error: err,
+					})
+				}
+
 				log.Error(loggerModels.LogProperties{
 					Event: "download_attachments_failed",
 					Error: err,
@@ -104,7 +135,17 @@ func downloadAttachments(c *gin.Context, log *loggerModels.Logger, gmailClient *
 				return
 			}
 
+			message.Status = "success"
+			err = gmailClient.UpdateMessage(c, message)
+			if err != nil {
+				log.Error(loggerModels.LogProperties{
+					Event: "update_message_failed",
+					Error: err,
+				})
+			}
+
 			if extract == nil {
+
 				return
 			}
 
