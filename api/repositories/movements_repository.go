@@ -76,11 +76,6 @@ func (r *MovementsRepository) GetMovementsByDateRange(ctx context.Context, start
 func (r *MovementsRepository) GetMovements(ctx context.Context, page int64) ([]*schemas.Movement, int64, error) {
 	var movements []*schemas.Movement
 
-	repo, err := NewMovementsRepository(ctx)
-	if err != nil {
-		return nil, 0, err
-	}
-
 	if page < 1 {
 		page = 1
 	}
@@ -101,7 +96,7 @@ func (r *MovementsRepository) GetMovements(ctx context.Context, page int64) ([]*
 		SetSkip(skip).
 		SetSort(bson.M{"date": -1})
 
-	cursor, err := repo.collection.Find(ctx, bson.M{}, findOptions)
+	cursor, err := r.collection.Find(ctx, bson.M{}, findOptions)
 	if err != nil {
 		return nil, 0, err
 	}

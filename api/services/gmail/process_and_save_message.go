@@ -32,7 +32,7 @@ func ProcessAndSaveMessage() gin.HandlerFunc {
 			return
 		}
 
-		err = gmailService.ProcessMessage(c, messageID)
+		message, err := gmailService.ProcessMessage(c, messageID, "")
 		if err != nil {
 			log.Error(loggerModels.LogProperties{
 				Event: "process_message_failed",
@@ -43,7 +43,7 @@ func ProcessAndSaveMessage() gin.HandlerFunc {
 		}
 
 		models.NewResponseOK(c, models.Response{
-			Message: "message processed successfully",
+			Data: message,
 		})
 	}
 }

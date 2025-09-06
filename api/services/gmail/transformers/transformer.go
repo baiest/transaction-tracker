@@ -5,17 +5,23 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"transaction-tracker/api/services/gmail/models"
 	"transaction-tracker/database/mongo/schemas"
 
 	"google.golang.org/api/gmail/v1"
 )
 
 type MovementTransformer interface {
-	Excecute() (*schemas.Movement, error)
+	Excecute() ([]*schemas.Movement, error)
+	SetExtract(*schemas.GmailExtract)
 }
 
-func NewMovementTransformer(transformerType string, msg *gmail.Message) (MovementTransformer, error) {
+func NewMovementTransformer(transformerType string, msg *gmail.Message, messageType models.MessageType) (MovementTransformer, error) {
 	body := ""
+
+	if messageType == models.Extract {
+		return NewDaviviendaTransformer(body, messageType), nil
+	}
 
 	if len(msg.Payload.Parts) > 0 {
 		body = msg.Payload.Parts[0].Body.Data
@@ -32,7 +38,9 @@ func NewMovementTransformer(transformerType string, msg *gmail.Message) (Movemen
 		return nil, fmt.Errorf("Error decoding body")
 	}
 
-	return NewDaviviendaTransformer(string(decodedBody)), nil
+	body = string(decodedBody)
+
+	return NewDaviviendaTransformer(body, messageType), nil
 }
 
 func cleanAndNormalizeText(text string) string {

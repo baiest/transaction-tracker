@@ -2,34 +2,59 @@ package transformers
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+	"transaction-tracker/api/services/gmail/models"
 	"transaction-tracker/database/mongo/schemas"
+	documentextractor "transaction-tracker/document-extractor"
 )
 
 type Davivienda struct {
-	date    time.Time
-	hour    time.Time
-	value   float64
-	details string
-	place   string
-	text    string
+	date        time.Time
+	hour        time.Time
+	value       float64
+	details     string
+	place       string
+	text        string
+	messageType models.MessageType
+	extract     *schemas.GmailExtract
 }
 
 var (
+	daviviendaExtractor = &documentextractor.DaviviendaExtract{
+		Password: os.Getenv("EXTRACT_PDF_PASSWORD"),
+	}
+
 	regex = regexp.MustCompile(
 		`Fecha:(?P<fecha>.+)\nHora:(?P<hora>.+)\nValor Transacción:\s*(?P<valor>.+)\nClase de Movimiento:\s*(?P<clase>.+),\nLugar de Transacción:(?P<lugar>.+)`)
 )
 
-func NewDaviviendaTransformer(text string) MovementTransformer {
+func NewDaviviendaTransformer(text string, messageType models.MessageType) MovementTransformer {
 	return &Davivienda{
-		text: text,
+		text:        text,
+		messageType: messageType,
 	}
 }
 
-func (d *Davivienda) Excecute() (*schemas.Movement, error) {
+func (d *Davivienda) Excecute() ([]*schemas.Movement, error) {
+	switch d.messageType {
+	case models.Movement:
+		return d.excecuteMovement()
+	case models.Extract:
+		return d.excecuteExtract()
+	}
+
+	return nil, fmt.Errorf("message type not defined")
+}
+
+func (d *Davivienda) SetExtract(extract *schemas.GmailExtract) {
+	d.extract = extract
+}
+
+func (d *Davivienda) excecuteMovement() ([]*schemas.Movement, error) {
 	cleanedText := cleanAndNormalizeText(d.text)
 
 	matches := regex.FindStringSubmatch(cleanedText)
@@ -76,8 +101,43 @@ func (d *Davivienda) Excecute() (*schemas.Movement, error) {
 		}
 	}
 
-	return schemas.NewMovement("", "", time.Date(
+	return []*schemas.Movement{schemas.NewMovement("", "", time.Date(
 		d.date.Year(), d.date.Month(), d.date.Day(),
 		d.hour.Hour(), d.hour.Minute(), d.hour.Second(), 0, d.hour.Location(),
-	), d.value, d.value < 0, "others", d.details+" "+d.place), nil
+	), d.value, strings.Contains(d.details, "Descuento"), "others", d.details+" "+d.place)}, nil
+}
+
+func (d *Davivienda) excecuteExtract() ([]*schemas.Movement, error) {
+	if d.extract == nil {
+		return nil, fmt.Errorf("missing extract")
+	}
+
+	if daviviendaExtractor.Password == "" {
+		return nil, fmt.Errorf("missing extract paassword")
+	}
+
+	movementsExtracted := daviviendaExtractor.GetMovements(d.extract.FilePath)
+	if len(movementsExtracted) == 0 {
+		return nil, fmt.Errorf("missing movements from extract")
+	}
+
+	movements := []*schemas.Movement{}
+
+	for _, m := range movementsExtracted {
+		movement := schemas.NewMovement(
+			d.extract.Email,
+			d.extract.ID,
+			m.Date,
+			m.Value,
+			m.IsNegative,
+			m.Topic,
+			m.Detail,
+		)
+
+		if movement != nil {
+			movements = append(movements, movement)
+		}
+	}
+
+	return movements, nil
 }

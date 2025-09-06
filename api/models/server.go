@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"runtime/debug"
 	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 
@@ -75,7 +76,7 @@ func RecoveryWithJSON() gin.HandlerFunc {
 			if r := recover(); r != nil {
 				log.Panic(loggerModels.LogProperties{
 					Event: "panic_recovered",
-					Error: fmt.Errorf("%v", r),
+					Error: fmt.Errorf("%v\n%s", r, debug.Stack()),
 				})
 
 				NewResponseInternalServerError(c)
