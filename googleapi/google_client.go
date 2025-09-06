@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"transaction-tracker/api/models"
 	"transaction-tracker/database/mongo/schemas"
-	"transaction-tracker/googleapi/repository"
+	"transaction-tracker/googleapi/repositories"
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -24,12 +25,17 @@ type GoogleClient struct {
 	email        string
 	Config       *oauth2.Config
 	gmailService *GmailService
-	repository   *repository.GoogleAccountsRepository
+	repository   *repositories.GoogleAccountsRepository
 }
 
 func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
 	if clientID == "" || clientSecret == "" {
 		return nil, fmt.Errorf("GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET must be configurated")
+	}
+
+	email := ctx.Value("account").(*models.Account).Email
+	if email == "" {
+		return nil, fmt.Errorf("missing email")
 	}
 
 	config := &oauth2.Config{
@@ -43,12 +49,12 @@ func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
 		Endpoint: google.Endpoint,
 	}
 
-	repository, err := repository.NeGoogleAccountsRepository(ctx)
+	repository, err := repositories.NeGoogleAccountsRepository(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return &GoogleClient{Config: config, repository: repository}, nil
+	return &GoogleClient{Config: config, repository: repository, email: email}, nil
 }
 
 func (g *GoogleClient) SaveTokenAndInitServices(ctx context.Context, code string) error {
@@ -136,4 +142,8 @@ func (g *GoogleClient) GmailService(ctx context.Context) (*GmailService, error) 
 
 func (g *GoogleClient) SetEmail(email string) {
 	g.email = email
+}
+
+func (g *GoogleClient) Email() string {
+	return g.email
 }

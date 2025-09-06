@@ -9,7 +9,6 @@ import (
 	"transaction-tracker/api/services/transactions"
 	"transaction-tracker/database/mongo/schemas"
 	"transaction-tracker/googleapi"
-	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
@@ -36,28 +35,18 @@ var (
 	log *loggerModels.Logger
 )
 
-func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
+func StoreEmailByFilters() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		log := c.MustGet("logger").(*loggerModels.Logger)
 
-		log, err := logger.GetLogger(c, "transaction-tracker")
+		gClient, err := googleapi.NewGoogleClient(c)
 		if err != nil {
-			models.NewResponseInvalidRequest(c, models.Response{
-				Message: fmt.Sprintf("logger not init: %s", err.Error),
+			log.Error(loggerModels.LogProperties{
+				Event: "init_google_client_failed",
+				Error: err,
 			})
 
-			return
-		}
-
-		email := c.PostForm("email")
-		if email == "" {
-			log.Info(loggerModels.LogProperties{
-				Event: "missing_email",
-			})
-
-			models.NewResponseInvalidRequest(c, models.Response{
-				Message: "email is required in x-www-form-urlencoded body",
-			})
-
+			models.NewResponseInternalServerError(c)
 			return
 		}
 
@@ -74,8 +63,6 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 			return
 		}
-
-		gClient.SetEmail(email)
 
 		gmailClient, err := gClient.GmailService(c)
 		if err != nil {
@@ -110,7 +97,7 @@ func StoreEmailByFilters(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 				Error: err,
 			})
 
-			models.NewResponseNotFoud(c, models.Response{
+			models.NewResponseNotFound(c, models.Response{
 				Message: "no emails found for given historyID",
 			})
 
@@ -261,7 +248,7 @@ func processMessageInTransactions(gmailClient *googleapi.GmailService, messageID
 	return msg, nil
 }
 
-func processNotificationMessages(c *gin.Context, log *loggerModels.Logger, gmailClient *googleapi.GmailService, notification *schemas.GamilNotification) {
+func processNotificationMessages(c *gin.Context, log *loggerModels.Logger, gmailClient *googleapi.GmailService, notification *schemas.GmailNotification) {
 	if notification.Status == "success" {
 		models.NewResponseOK(c, models.Response{
 			Message: "notification is already saved",

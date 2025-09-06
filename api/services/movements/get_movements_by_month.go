@@ -1,59 +1,59 @@
-package google
+package services
 
 import (
-	"errors"
+	"strconv"
 	"transaction-tracker/api/models"
-	"transaction-tracker/googleapi"
 	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GoogleDeleteWath() gin.HandlerFunc {
+func GetMovementsByMonth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		log := c.MustGet("logger").(*loggerModels.Logger)
 
-		gClient, err := googleapi.NewGoogleClient(c)
+		movementsService, err := NewMovementsService(c)
 		if err != nil {
 			log.Error(loggerModels.LogProperties{
-				Event: "init_google_client_failed",
+				Event: "init_movements_service_failed",
 				Error: err,
 			})
 
-			models.NewResponseInternalServerError(c)
 			return
 		}
 
-		gmailService, err := gClient.GmailService(c)
+		year, err := strconv.Atoi(c.Param("year"))
 		if err != nil {
 			log.Error(loggerModels.LogProperties{
-				Event: "init_gmail_service_failed",
+				Event: "invalid_year",
 				Error: err,
 			})
 
 			models.NewResponseInvalidRequest(c, models.Response{
-				Message: err.Error(),
+				Message: "invalid year",
 			})
 
 			return
 		}
 
-		err = gmailService.DeleteWatch()
-		if errors.Is(err, googleapi.ErrMissingHistoryID) {
-			log.Info(loggerModels.LogProperties{
-				Event: "missing_history_id",
+		month, err := strconv.Atoi(c.Param("month"))
+		if err != nil || month < 1 || month > 12 {
+			log.Error(loggerModels.LogProperties{
+				Event: "invalid_month",
+				Error: err,
 			})
 
 			models.NewResponseInvalidRequest(c, models.Response{
-				Message: "missing historyID",
+				Message: "invalid month",
 			})
 
 			return
 		}
 
+		movements, err := movementsService.GetMovementsByMonth(c, year, month)
 		if err != nil {
 			log.Error(loggerModels.LogProperties{
-				Event: "delete_watch_failed",
+				Event: "get_movements_by_month_failed",
 				Error: err,
 			})
 
@@ -63,7 +63,7 @@ func GoogleDeleteWath() gin.HandlerFunc {
 		}
 
 		models.NewResponseOK(c, models.Response{
-			Message: "watch deleted succefully",
+			Data: movements,
 		})
 	}
 }

@@ -8,21 +8,27 @@ import (
 var (
 	gmailRoutes = []models.Route{
 		{
-			Endppoint:   "/gmail/watchers",
+			Endpoint:    "/gmail/watchers",
 			Method:      models.DELETE,
-			HandlerFunc: services.GoogleDeleteWath,
+			HandlerFunc: services.GoogleDeleteWath(),
 			ApiVersion:  API_VERSION,
 		},
 		{
-			Endppoint:   "/gmail/emails/:historyID",
+			Endpoint:    "/gmail/emails/histories/:historyID",
 			Method:      models.GET,
-			HandlerFunc: services.GetEmailByHistoryID,
+			HandlerFunc: services.GetEmailByHistoryID(),
 			ApiVersion:  API_VERSION,
 		},
 		{
-			Endppoint:   "/gmail/emails/:historyID/save",
+			Endpoint:    "/gmail/emails/histories/:historyID/save",
 			Method:      models.POST,
-			HandlerFunc: services.StoreEmailByFilters,
+			HandlerFunc: services.StoreEmailByFilters(),
+			ApiVersion:  API_VERSION,
+		},
+		{
+			Endpoint:    "/gmail/emails/extracts",
+			Method:      models.POST,
+			HandlerFunc: services.StoreBankExtracts(),
 			ApiVersion:  API_VERSION,
 		},
 	}

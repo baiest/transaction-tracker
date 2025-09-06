@@ -1,8 +1,6 @@
 package models
 
 import (
-	"transaction-tracker/googleapi"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,8 +13,9 @@ const (
 )
 
 type Route struct {
-	Method      Method
-	Endppoint   string
-	HandlerFunc func(*googleapi.GoogleClient) gin.HandlerFunc
-	ApiVersion  string
+	Method         Method
+	Endpoint       string
+	HandlerFunc    gin.HandlerFunc
+	ApiVersion     string
+	NoRequiresAuth bool
 }

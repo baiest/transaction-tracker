@@ -1,4 +1,4 @@
-package repository
+package repositories
 
 import (
 	"errors"
@@ -21,7 +21,7 @@ const (
 )
 
 type IGmailNotificationsRepository interface {
-	SaveNotification(ctx Context, notification *schemas.GamilNotification) error
+	SaveNotification(ctx Context, notification *schemas.GmailNotification) error
 }
 
 type GmailNotificationsRepository struct {
@@ -43,7 +43,7 @@ func NewGmailNotificationsRepository(ctx Context) (*GmailNotificationsRepository
 }
 
 // SaveNotification inserts a new GmailNotification. If the ID already exists, returns ErrNotificationAlreadyExists.
-func (r *GmailNotificationsRepository) SaveNotification(ctx Context, notification *schemas.GamilNotification) error {
+func (r *GmailNotificationsRepository) SaveNotification(ctx Context, notification *schemas.GmailNotification) error {
 	_, err := r.collection.InsertOne(ctx, notification, options.InsertOne())
 	if err != nil {
 		// Check for duplicate key error
@@ -58,7 +58,7 @@ func (r *GmailNotificationsRepository) SaveNotification(ctx Context, notificatio
 }
 
 // GetNotificationByID fetches a GmailNotification by its ID.
-func (r *GmailNotificationsRepository) GetNotificationByID(ctx Context, id string) (*schemas.GamilNotification, error) {
+func (r *GmailNotificationsRepository) GetNotificationByID(ctx Context, id string) (*schemas.GmailNotification, error) {
 	result := r.collection.FindOne(ctx, bson.M{"_id": id})
 	if errors.Is(result.Err(), mongo.ErrNoDocuments) {
 		return nil, errors.New("gmail notification not found")
@@ -67,7 +67,7 @@ func (r *GmailNotificationsRepository) GetNotificationByID(ctx Context, id strin
 		return nil, result.Err()
 	}
 
-	notification := &schemas.GamilNotification{}
+	notification := &schemas.GmailNotification{}
 	if err := result.Decode(notification); err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (r *GmailNotificationsRepository) GetNotificationByID(ctx Context, id strin
 }
 
 // UpdateNotification updates an existing GmailNotification by its ID.
-func (r *GmailNotificationsRepository) UpdateNotification(ctx Context, notification *schemas.GamilNotification) error {
+func (r *GmailNotificationsRepository) UpdateNotification(ctx Context, notification *schemas.GmailNotification) error {
 	filter := bson.M{"_id": notification.ID}
 	update := bson.M{
 		"$set": bson.M{

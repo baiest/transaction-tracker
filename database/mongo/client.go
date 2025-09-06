@@ -18,8 +18,11 @@ const (
 
 	TRANSACTIONS        DatabaseName   = "transactions"
 	GOOGLE_ACCOUNTS     CollectionName = "google_accounts"
+	GMAIL_EXTRACTS      CollectionName = "gmail_extracts"
 	GMAIL_NOTIFICATIONS CollectionName = "gmail_notifications"
 	GMAIL_MESSAGES      CollectionName = "gmail_messages"
+
+	MOVEMENTS CollectionName = "movements"
 )
 
 type MongoClient struct {

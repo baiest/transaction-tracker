@@ -2,7 +2,8 @@ package models
 
 import (
 	"fmt"
-	"transaction-tracker/googleapi"
+	"transaction-tracker/logger"
+	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,17 +14,89 @@ type Server struct {
 }
 
 func NewServer(port int) *Server {
+	engine := gin.Default()
+
+	engine.Use(InitLogger())
+	engine.Use(RecoveryWithJSON())
+
 	return &Server{
 		Port:   fmt.Sprintf(":%d", port),
-		engine: gin.Default(),
+		engine: engine,
 	}
 }
 
-func (s *Server) AddRoutes(routes []Route, gClient *googleapi.GoogleClient) {
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// token := c.GetHeader("Authorization")
+		// if token == "" {
+		// 	NewResponseUnauthorized(c, Response{
+		// 		Message: "missing authorization token",
+		// 	})
+
+		// 	return
+		// }
+
+		account, err := func() (*Account, error) {
+			return &Account{Email: "juanballesteros2001@gmail.com"}, nil
+		}()
+
+		if err != nil {
+			NewResponseUnauthorized(c, Response{
+				Message: "invalid or expired token",
+			})
+
+			return
+		}
+
+		c.Set("account", account)
+
+		c.Next()
+	}
+}
+
+func InitLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		log, err := logger.GetLogger(c, "transaction-tracker")
+		if err != nil {
+			NewResponseInternalServerError(c)
+			return
+		}
+
+		c.Set("logger", log)
+		c.Next()
+	}
+}
+
+func RecoveryWithJSON() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		log := c.MustGet("logger").(*loggerModels.Logger)
+
+		defer func() {
+			if r := recover(); r != nil {
+				log.Panic(loggerModels.LogProperties{
+					Event: "panic_recovered",
+					Error: fmt.Errorf("%v", r),
+				})
+
+				NewResponseInternalServerError(c)
+			}
+		}()
+		c.Next()
+	}
+}
+
+func (s *Server) AddRoutes(routes []Route) {
 	api := s.engine.Group("/api")
 
 	for _, r := range routes {
-		api.Group(r.ApiVersion).Handle(string(r.Method), r.Endppoint, r.HandlerFunc(gClient))
+		groupPublic := api.Group(r.ApiVersion)
+		groupPrivate := api.Group(r.ApiVersion, AuthMiddleware())
+
+		if r.NoRequiresAuth {
+			groupPublic.Handle(string(r.Method), r.Endpoint, r.HandlerFunc)
+		} else {
+			groupPrivate.Handle(string(r.Method), r.Endpoint, r.HandlerFunc)
+		}
 	}
 }
 

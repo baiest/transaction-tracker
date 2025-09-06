@@ -1,24 +1,46 @@
 package models
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
 
 type Response struct {
-	Message string `json:"message"`
-	Data    any    `json:"data"`
+	Message string `json:"message,omitempty"`
+	Data    any    `json:"data,omitempty"`
+}
+
+func (r *Response) ContainsMessage() bool {
+	return r.Message != ""
+}
+
+func (r *Response) DataOrMessage() any {
+	if r.ContainsMessage() {
+		return gin.H{"message": r.Message}
+	}
+
+	return r.Data
 }
 
 func NewResponseOK(c *gin.Context, response Response) {
-	c.JSON(200, response)
+	c.JSON(http.StatusOK, response.DataOrMessage())
 }
 
 func NewResponseInternalServerError(c *gin.Context) {
-	c.JSON(500, Response{Message: "something was wrong, please try again"})
+	response := Response{Message: "something was wrong, please try again"}
+
+	c.AbortWithStatusJSON(http.StatusInternalServerError, response.DataOrMessage())
 }
 
-func NewResponseNotFoud(c *gin.Context, response Response) {
-	c.JSON(404, response)
+func NewResponseNotFound(c *gin.Context, response Response) {
+	c.JSON(http.StatusNotFound, response.DataOrMessage())
 }
 
 func NewResponseInvalidRequest(c *gin.Context, response Response) {
-	c.JSON(400, response)
+	c.JSON(http.StatusBadRequest, response.DataOrMessage())
+}
+
+func NewResponseUnauthorized(c *gin.Context, response Response) {
+	c.AbortWithStatusJSON(http.StatusUnauthorized, response.DataOrMessage())
 }
