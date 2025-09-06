@@ -10,7 +10,7 @@ import (
 type Movement struct {
 	ID         string    `bson:"_id"`
 	Email      string    `bson:"email"`
-	ExtractID  string    `bson:"extract_id"`
+	MessageID  string    `bson:"message_id"`
 	Date       time.Time `bson:"date"`
 	Value      float64   `bson:"value"`
 	IsNegative bool      `bson:"is_negative"`
@@ -20,11 +20,11 @@ type Movement struct {
 
 const _movement_prefix = "MOV"
 
-func NewMovement(email string, extractID string, date time.Time, value float64, isNegative bool, movementTopic string, detail string) *Movement {
+func NewMovement(email string, messageID string, date time.Time, value float64, isNegative bool, movementTopic string, detail string) *Movement {
 	return &Movement{
 		ID:         _movement_prefix + strings.ReplaceAll(uuid.New().String(), "-", ""),
 		Email:      email,
-		ExtractID:  extractID,
+		MessageID:  messageID,
 		Date:       date,
 		Value:      value,
 		IsNegative: isNegative,

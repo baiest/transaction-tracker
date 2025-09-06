@@ -1,4 +1,4 @@
-package google
+package gmail
 
 import (
 	"strconv"
@@ -13,17 +13,6 @@ func GetEmailByHistoryID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		log := c.MustGet("logger").(*loggerModels.Logger)
 
-		gClient, err := googleapi.NewGoogleClient(c)
-		if err != nil {
-			log.Error(loggerModels.LogProperties{
-				Event: "init_google_client_failed",
-				Error: err,
-			})
-
-			models.NewResponseInternalServerError(c)
-			return
-		}
-
 		historyID, err := strconv.ParseUint(c.Param("historyID"), 10, 64)
 		if err != nil {
 			log.Error(loggerModels.LogProperties{
@@ -35,6 +24,17 @@ func GetEmailByHistoryID() gin.HandlerFunc {
 				Message: "invalid historyID",
 			})
 
+			return
+		}
+
+		gClient, err := googleapi.NewGoogleClient(c)
+		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "init_google_client_failed",
+				Error: err,
+			})
+
+			models.NewResponseInternalServerError(c)
 			return
 		}
 

@@ -13,6 +13,7 @@ import (
 
 var (
 	ErrMessageAlreadyExists = errors.New("gmail message already exists")
+	ErrMessageNotFound      = errors.New("gmail message not found")
 )
 
 const (
@@ -64,7 +65,7 @@ func (r *GmailMessageRepository) SaveMessage(ctx Context, message *schemas.Messa
 func (r *GmailMessageRepository) GetMessageByID(ctx Context, id string) (*schemas.Message, error) {
 	result := r.collection.FindOne(ctx, bson.M{"_id": id})
 	if errors.Is(result.Err(), mongo.ErrNoDocuments) {
-		return nil, errors.New("gmail message not found")
+		return nil, ErrMessageNotFound
 	}
 
 	if result.Err() != nil {
@@ -85,11 +86,16 @@ func (r *GmailMessageRepository) GetMessagesByNotificationID(ctx Context, notifi
 	if err != nil {
 		return nil, err
 	}
+
 	defer cursor.Close(ctx)
 
 	var messages []*schemas.Message
 	if err = cursor.All(ctx, &messages); err != nil {
 		return nil, err
+	}
+
+	if len(messages) == 0 {
+		return []*schemas.Message{}, nil
 	}
 
 	return messages, nil

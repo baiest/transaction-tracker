@@ -39,11 +39,11 @@ const (
 )
 
 var (
-	baseURL       = os.Getenv("BASE_TRANSACTION_URL")
-	timeToRetry   = 5 * time.Second
-	urlStoreEmail = "/api/v1/gmail/emails/%d/save"
-
-	log *loggerModels.Logger
+	baseURL         = os.Getenv("BASE_TRANSACTION_URL")
+	timeToRetry     = 5 * time.Second
+	urlStoreEmail   = "/api/v1/gmail/emails/histories/%d/save"
+	credentialsFile = "sa-key.json"
+	log             *loggerModels.Logger
 )
 
 func storeEmail(message *Message, maxRetries int) error {
@@ -80,6 +80,11 @@ func handleSubscription(ctx context.Context, msg []byte) error {
 	message := &Message{}
 	err := json.Unmarshal(msg, message)
 	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "error_unmarshalling_message",
+			Error: err,
+		})
+
 		return err
 	}
 
@@ -138,10 +143,20 @@ func main() {
 		return
 	}
 
-	pubsubService, err := googleapi.NewGooglePubSub(ctx, projectID)
+	pubsubService, err := googleapi.NewGooglePubSub(ctx, projectID, credentialsFile)
 	if err != nil {
 		log.Error(loggerModels.LogProperties{
 			Event: "failed_to_initialize_pubsub",
+			Error: err,
+		})
+
+		return
+	}
+
+	sub, err := pubsubService.GetSubscription(ctx, subscription)
+	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "failed_to_get_subscription",
 			Error: err,
 		})
 
@@ -152,7 +167,7 @@ func main() {
 		Event: "pubsub_subscribed",
 		AdditionalParams: []loggerModels.Properties{
 			logger.MapToProperties(map[string]string{
-				"subscription": subscription,
+				"subscription": sub.String(),
 			}),
 		},
 	})

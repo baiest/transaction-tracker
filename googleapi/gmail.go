@@ -30,6 +30,7 @@ var (
 	}
 
 	ErrMissingHistoryID = errors.New("missing historyID")
+	ErrMessageNotFound  = errors.New("message not found")
 
 	extractsFolder = "files/extracts"
 )
@@ -113,7 +114,7 @@ func (gmailService *GmailService) SaveNotification(ctx context.Context, notifica
 
 		notification.Messages = messages
 
-		return notification, err
+		return notification, nil
 	}
 
 	if err != nil {
@@ -139,19 +140,23 @@ func (gmailService *GmailService) UpdateMessage(ctx context.Context, message *sc
 	return gmailService.gmailMessageRepository.UpdateMessage(ctx, message)
 }
 
-func (gmailService *GmailService) GetMessageByID(ctx context.Context, messageID string, retries int) (*gmail.Message, error) {
+func (gmailService *GmailService) getMessageWithRetries(ctx context.Context, messageID string, retries int) (*gmail.Message, error) {
 	msg, err := gmailService.Client.Users.Messages.Get("me", messageID).Format("full").Do()
 	if err != nil {
 		if strings.Contains(err.Error(), "Too many concurrent requests for user") && retries > 0 {
 			time.Sleep(1 * time.Second)
 
-			return gmailService.GetMessageByID(ctx, messageID, retries-1)
+			return gmailService.getMessageWithRetries(ctx, messageID, retries-1)
 		}
 
 		return nil, err
 	}
 
 	return msg, nil
+}
+
+func (gmailService *GmailService) GetMessageByID(ctx context.Context, messageID string) (*gmail.Message, error) {
+	return gmailService.getMessageWithRetries(ctx, messageID, 5)
 }
 
 func (gmailService *GmailService) GetMessageAttachment(ctx context.Context, messageID string, attachmentID string) (*gmail.MessagePartBody, error) {
@@ -174,10 +179,10 @@ func (gmailService *GmailService) DownloadAttachments(ctx context.Context, messa
 	}
 
 	if extract != nil {
-		return nil, nil
+		return extract, nil
 	}
 
-	msg, err := gmailService.GetMessageByID(ctx, messageID, 3)
+	msg, err := gmailService.GetMessageByID(ctx, messageID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting message: %w", err)
 	}
@@ -201,7 +206,10 @@ func (gmailService *GmailService) DownloadAttachments(ctx context.Context, messa
 				year = year - 1
 			}
 
-			dirPath := filepath.Join(extractsFolder, gmailService.email, fmt.Sprintf("%d", year))
+			exePath, _ := os.Getwd()
+			currentDir := filepath.Dir(exePath)
+
+			dirPath := filepath.Join(currentDir, extractsFolder, gmailService.email, fmt.Sprintf("%d", year))
 
 			err = os.MkdirAll(dirPath, os.ModePerm)
 			if err != nil {
@@ -230,4 +238,17 @@ func (gmailService *GmailService) DownloadAttachments(ctx context.Context, messa
 	}
 
 	return extract, nil
+}
+
+func (gmailService *GmailService) GetMessage(ctx context.Context, messageID string) (*schemas.Message, error) {
+	message, err := gmailService.gmailMessageRepository.GetMessageByID(ctx, messageID)
+	if errors.Is(err, repositories.ErrMessageNotFound) {
+		return nil, ErrMessageNotFound
+	}
+
+	return message, err
+}
+
+func (gmailService *GmailService) Email() string {
+	return gmailService.email
 }

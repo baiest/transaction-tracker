@@ -2,10 +2,12 @@ package repositories
 
 import (
 	"errors"
+	"time"
 	"transaction-tracker/database/mongo/schemas"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	databaseMongo "transaction-tracker/database/mongo"
 )
@@ -50,8 +52,18 @@ func NeGoogleAccountsRepository(ctx Context) (*GoogleAccountsRepository, error) 
 
 // SaveToken upserts the token by EmailAddress.
 func (r *GoogleAccountsRepository) SaveToken(ctx Context, account *schemas.GoogleAccount) error {
+	_, err := r.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": account.ID},
+		bson.M{
+			"$set": bson.M{
+				"token":      account.Token,
+				"updated_at": time.Now(),
+			},
+		},
+		options.UpdateOne().SetUpsert(true),
+	)
 
-	_, err := r.collection.InsertOne(ctx, account)
 	return err
 }
 

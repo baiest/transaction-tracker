@@ -1,5 +1,4 @@
-package services
-
+package movements
 import (
 	"transaction-tracker/api/models"
 	loggerModels "transaction-tracker/logger/models"

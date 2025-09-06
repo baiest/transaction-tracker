@@ -2,6 +2,7 @@ package routes
 
 import (
 	"transaction-tracker/api/models"
+	gmailServices "transaction-tracker/api/services/gmail"
 	services "transaction-tracker/api/services/google"
 )
 
@@ -16,19 +17,31 @@ var (
 		{
 			Endpoint:    "/gmail/emails/histories/:historyID",
 			Method:      models.GET,
-			HandlerFunc: services.GetEmailByHistoryID(),
+			HandlerFunc: gmailServices.GetEmailByHistoryID(),
 			ApiVersion:  API_VERSION,
 		},
 		{
 			Endpoint:    "/gmail/emails/histories/:historyID/save",
 			Method:      models.POST,
-			HandlerFunc: services.StoreEmailByFilters(),
+			HandlerFunc: gmailServices.StoreEmailByFilters(),
+			ApiVersion:  API_VERSION,
+		},
+		{
+			Endpoint:    "/gmail/emails/messages/:messageID",
+			Method:      models.POST,
+			HandlerFunc: gmailServices.ProcessAndSaveMessage(),
+			ApiVersion:  API_VERSION,
+		},
+		{
+			Endpoint:    "/gmail/emails/messages/:messageID",
+			Method:      models.GET,
+			HandlerFunc: gmailServices.GetMessage(),
 			ApiVersion:  API_VERSION,
 		},
 		{
 			Endpoint:    "/gmail/emails/extracts",
 			Method:      models.POST,
-			HandlerFunc: services.StoreBankExtracts(),
+			HandlerFunc: gmailServices.StoreBankExtracts(),
 			ApiVersion:  API_VERSION,
 		},
 	}

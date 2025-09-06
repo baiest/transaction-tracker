@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	pubsub "cloud.google.com/go/pubsub"
+	"google.golang.org/api/option"
 )
 
 // PubSubService interface to use Pub/Sub service
@@ -19,8 +20,8 @@ type GooglePubSub struct {
 }
 
 // NewGooglePubSub creates a new GooglePubSub client
-func NewGooglePubSub(ctx context.Context, projectID string) (*GooglePubSub, error) {
-	client, err := pubsub.NewClient(ctx, projectID)
+func NewGooglePubSub(ctx context.Context, projectID string, credentialsFile string) (*GooglePubSub, error) {
+	client, err := pubsub.NewClient(ctx, projectID, option.WithCredentialsFile(credentialsFile))
 	if err != nil {
 		return nil, err
 	}
@@ -49,4 +50,8 @@ func (g *GooglePubSub) Subscribe(
 
 		msg.Ack()
 	})
+}
+
+func (g *GooglePubSub) GetSubscription(ctx context.Context, subscriptionID string) (*pubsub.Subscription, error) {
+	return g.client.Subscription(subscriptionID), nil
 }

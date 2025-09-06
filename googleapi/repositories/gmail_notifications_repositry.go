@@ -44,6 +44,8 @@ func NewGmailNotificationsRepository(ctx Context) (*GmailNotificationsRepository
 
 // SaveNotification inserts a new GmailNotification. If the ID already exists, returns ErrNotificationAlreadyExists.
 func (r *GmailNotificationsRepository) SaveNotification(ctx Context, notification *schemas.GmailNotification) error {
+	notification.Messages = nil
+
 	_, err := r.collection.InsertOne(ctx, notification, options.InsertOne())
 	if err != nil {
 		// Check for duplicate key error
@@ -77,6 +79,8 @@ func (r *GmailNotificationsRepository) GetNotificationByID(ctx Context, id strin
 
 // UpdateNotification updates an existing GmailNotification by its ID.
 func (r *GmailNotificationsRepository) UpdateNotification(ctx Context, notification *schemas.GmailNotification) error {
+	notification.Messages = nil
+
 	filter := bson.M{"_id": notification.ID}
 	update := bson.M{
 		"$set": bson.M{
