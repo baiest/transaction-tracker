@@ -174,7 +174,7 @@ func (gmailService *GmailService) DownloadAttachments(ctx context.Context, messa
 	}
 
 	if extract != nil {
-		return extract, nil
+		return nil, nil
 	}
 
 	msg, err := gmailService.GetMessageByID(ctx, messageID, 3)

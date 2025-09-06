@@ -25,3 +25,7 @@ func (l *Logger) Info(props LogProperties) {
 func (l *Logger) Error(props LogProperties) {
 	l.Service.Log("error", props)
 }
+
+func (l *Logger) Panic(props LogProperties) {
+	l.Service.Log("panic", props)
+}

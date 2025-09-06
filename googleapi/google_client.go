@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"transaction-tracker/api/models"
 	"transaction-tracker/database/mongo/schemas"
 	"transaction-tracker/googleapi/repositories"
 
@@ -32,6 +33,11 @@ func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
 		return nil, fmt.Errorf("GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET must be configurated")
 	}
 
+	email := ctx.Value("account").(*models.Account).Email
+	if email == "" {
+		return nil, fmt.Errorf("missing email")
+	}
+
 	config := &oauth2.Config{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -48,7 +54,7 @@ func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
 		return nil, err
 	}
 
-	return &GoogleClient{Config: config, repository: repository}, nil
+	return &GoogleClient{Config: config, repository: repository, email: email}, nil
 }
 
 func (g *GoogleClient) SaveTokenAndInitServices(ctx context.Context, code string) error {
