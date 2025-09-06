@@ -86,11 +86,16 @@ func (r *GmailMessageRepository) GetMessagesByNotificationID(ctx Context, notifi
 	if err != nil {
 		return nil, err
 	}
+
 	defer cursor.Close(ctx)
 
 	var messages []*schemas.Message
 	if err = cursor.All(ctx, &messages); err != nil {
 		return nil, err
+	}
+
+	if len(messages) == 0 {
+		return []*schemas.Message{}, nil
 	}
 
 	return messages, nil

@@ -114,7 +114,7 @@ func (gmailService *GmailService) SaveNotification(ctx context.Context, notifica
 
 		notification.Messages = messages
 
-		return notification, err
+		return notification, nil
 	}
 
 	if err != nil {
@@ -136,7 +136,7 @@ func (gmailService *GmailService) UpdateNotification(ctx context.Context, notifi
 	return gmailService.gmailRepository.UpdateNotification(ctx, notification)
 }
 
-func (gmailService *GmailService) UpdateMessage(ctx context.Context, message *schemas.Message) (error) {
+func (gmailService *GmailService) UpdateMessage(ctx context.Context, message *schemas.Message) error {
 	return gmailService.gmailMessageRepository.UpdateMessage(ctx, message)
 }
 
@@ -179,7 +179,7 @@ func (gmailService *GmailService) DownloadAttachments(ctx context.Context, messa
 	}
 
 	if extract != nil {
-		return nil, nil
+		return extract, nil
 	}
 
 	msg, err := gmailService.GetMessageByID(ctx, messageID)
@@ -206,7 +206,10 @@ func (gmailService *GmailService) DownloadAttachments(ctx context.Context, messa
 				year = year - 1
 			}
 
-			dirPath := filepath.Join(extractsFolder, gmailService.email, fmt.Sprintf("%d", year))
+			exePath, _ := os.Getwd()
+			currentDir := filepath.Dir(exePath)
+
+			dirPath := filepath.Join(currentDir, extractsFolder, gmailService.email, fmt.Sprintf("%d", year))
 
 			err = os.MkdirAll(dirPath, os.ModePerm)
 			if err != nil {
@@ -244,5 +247,8 @@ func (gmailService *GmailService) GetMessage(ctx context.Context, messageID stri
 	}
 
 	return message, err
+}
 
+func (gmailService *GmailService) Email() string {
+	return gmailService.email
 }
