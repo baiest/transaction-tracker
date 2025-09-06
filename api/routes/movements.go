@@ -14,6 +14,18 @@ var (
 			ApiVersion:  API_VERSION,
 		},
 		{
+			Endpoint:    "/movements",
+			Method:      models.POST,
+			HandlerFunc: services.CreateMovement(),
+			ApiVersion:  API_VERSION,
+		},
+		{
+			Endpoint:    "/movements/:movementID",
+			Method:      models.DELETE,
+			HandlerFunc: services.DeleteMovement(),
+			ApiVersion:  API_VERSION,
+		},
+		{
 			Endpoint:    "/movements/years/:year",
 			Method:      models.GET,
 			HandlerFunc: services.GetMovementsByYear(),

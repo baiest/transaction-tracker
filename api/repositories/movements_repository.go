@@ -20,6 +20,7 @@ type IMovementsRepository interface {
 	SaveMovement(context.Context, *schemas.Movement) error
 	GetMovements(context.Context, int64) ([]*schemas.Movement, int64, error)
 	GetMovementsByDateRange(context.Context, time.Time, time.Time) ([]*schemas.Movement, error)
+	DeleteMovement(context.Context, string) error
 }
 
 type MovementsRepository struct {
@@ -122,4 +123,10 @@ func (r *MovementsRepository) GetMovements(ctx context.Context, page int64) ([]*
 	}
 
 	return movements, totalPages, nil
+}
+
+func (r *MovementsRepository) DeleteMovement(ctx context.Context, movementID string) error {
+	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": movementID})
+
+	return err
 }

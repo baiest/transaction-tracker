@@ -20,7 +20,7 @@ type Movement struct {
 	Date       time.Time
 	Value      float64
 	IsNegative bool
-	Type       string
+	Topic      string
 	Detail     string
 }
 
@@ -86,7 +86,7 @@ func (e *DaviviendaExtract) GetMovements(pathPDF string) []*Movement {
 			Date:       date,
 			Value:      value,
 			IsNegative: m[3] == "-",
-			Type:       "unknown",
+			Topic:      "unknown",
 			Detail:     ToValidUTF8(strings.TrimSpace(m[5])),
 		}
 

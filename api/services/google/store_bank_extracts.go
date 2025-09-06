@@ -171,7 +171,7 @@ func storeMovementsFromExtracts(c *gin.Context, log *loggerModels.Logger, emailE
 						m.Date,
 						m.Value,
 						m.IsNegative,
-						m.Type,
+						m.Topic,
 						m.Detail,
 					)
 

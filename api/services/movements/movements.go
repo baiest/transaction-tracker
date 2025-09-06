@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"time"
 	"transaction-tracker/api/models"
 	"transaction-tracker/api/repositories"
@@ -110,4 +111,12 @@ func (s *MovementsService) GetMovementsByYear(ctx context.Context, year int) (*m
 	movementsByYear.Balance = movementsByYear.TotalIncome - movementsByYear.TotalOutcome
 
 	return movementsByYear, nil
+}
+
+func (s *MovementsService) DeleteMovement(ctx context.Context, movementID string) error {
+	if movementID == "" {
+		return errors.New("movementID is required")
+	}
+
+	return s.repo.DeleteMovement(ctx, movementID)
 }

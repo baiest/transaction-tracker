@@ -8,7 +8,7 @@ import (
 
 type Response struct {
 	Message string `json:"message,omitempty"`
-	Data    any    `json:"data",omitempty`
+	Data    any    `json:"data,omitempty"`
 }
 
 func (r *Response) ContainsMessage() bool {
