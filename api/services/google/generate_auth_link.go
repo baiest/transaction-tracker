@@ -10,6 +10,8 @@ import (
 
 func GoogleGenerateAuthLink() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		log := c.MustGet("logger").(*loggerModels.Logger)
+
 		gClient, err := googleapi.NewGoogleClient(c)
 		if err != nil {
 			log.Error(loggerModels.LogProperties{
