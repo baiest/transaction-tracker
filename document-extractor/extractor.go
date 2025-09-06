@@ -46,7 +46,6 @@ func extractTextFromPDF(pathPDF string, password string) string {
 
 func (e *DaviviendaExtract) GetMovements(pathPDF string) []*Movement {
 	text := currentTextExtractor(pathPDF, e.Password)
-	fmt.Println("Extracted text length:", len(text))
 
 	reYear := regexp.MustCompile(`INFORME DEL MES:.*?/(\d{4})`)
 	yearMatch := reYear.FindStringSubmatch(text)
@@ -66,19 +65,15 @@ func (e *DaviviendaExtract) GetMovements(pathPDF string) []*Movement {
 	movements := []*Movement{}
 
 	for _, m := range matches {
-		fmt.Println("Match:", m)
 		dayAndMonth := strings.Split(m[1], " ")
 
 		date, err := time.Parse("2006-01-02", fmt.Sprintf("%d-%s-%s", year, dayAndMonth[1], dayAndMonth[0]))
 		if err != nil {
-			fmt.Println(err)
 			continue
 		}
 
 		value, err := strconv.ParseFloat(strings.Replace(m[2], ",", "", -1), 64)
 		if err != nil {
-			fmt.Println(err)
-
 			continue
 		}
 
@@ -90,8 +85,6 @@ func (e *DaviviendaExtract) GetMovements(pathPDF string) []*Movement {
 			Detail:     ToValidUTF8(strings.TrimSpace(m[5])),
 		}
 
-		fmt.Println("Movement:", mov)
-
 		movements = append(movements, mov)
 	}
 
@@ -102,6 +95,6 @@ func ToValidUTF8(s string) string {
 	if utf8.ValidString(s) {
 		return s
 	}
-	// Reemplaza bytes inválidos por el caracter de sustitución
+
 	return string([]rune(s))
 }
