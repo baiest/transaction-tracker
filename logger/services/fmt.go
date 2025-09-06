@@ -21,13 +21,17 @@ func (l *FmtLogger) Log(level string, props models.LogProperties) {
 	stringProps := ""
 
 	for _, additionalParam := range props.AdditionalParams {
+		if additionalParam == nil {
+			continue
+		}
+
 		for key, value := range additionalParam.LogProperties() {
 			stringProps += fmt.Sprintf("| %s: %s", key, value)
 		}
 	}
 
-	if level == "error" && props.Error != nil {
-		stringProps += fmt.Sprintf("| error: %s", props.Error.Error())
+	if (level == "error" || level == "panic") && props.Error != nil {
+		stringProps += fmt.Sprintf("| error: %v", props.Error)
 	}
 
 	log.Printf("service: %s | level: %s | event: %s %s\n", l.ServiceName, level, props.Event, stringProps)

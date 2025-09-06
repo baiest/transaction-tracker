@@ -33,9 +33,8 @@ func extractTextFromPDF(pathPDF string, password string) string {
 	dir := filepath.Dir(exePath)
 
 	script := filepath.Join(dir, "document-extractor\\dist\\extract.exe")
-	pdf := filepath.Join(dir, pathPDF)
 
-	cmd := exec.Command(script, pdf, password)
+	cmd := exec.Command(script, pathPDF, password)
 	out, err := cmd.Output()
 	if err != nil {
 		panic(err)
