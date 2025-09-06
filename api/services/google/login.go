@@ -4,20 +4,23 @@ import (
 	"fmt"
 	"transaction-tracker/api/models"
 	"transaction-tracker/googleapi"
-	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GoogleLogin(gClient *googleapi.GoogleClient) gin.HandlerFunc {
+func GoogleLogin() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		log, err := logger.GetLogger(c, "google-login")
+		log := c.MustGet("logger").(*loggerModels.Logger)
+
+		gClient, err := googleapi.NewGoogleClient(c)
 		if err != nil {
-			models.NewResponseInvalidRequest(c, models.Response{
-				Message: fmt.Sprintf("logger not init: %s", err.Error()),
+			log.Error(loggerModels.LogProperties{
+				Event: "init_google_client_failed",
+				Error: err,
 			})
 
+			models.NewResponseInternalServerError(c)
 			return
 		}
 

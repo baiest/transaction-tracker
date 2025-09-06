@@ -10,19 +10,19 @@ var (
 		{
 			Endpoint:    "/movements",
 			Method:      models.GET,
-			HandlerFunc: services.GetMovements,
+			HandlerFunc: services.GetMovements(),
 			ApiVersion:  API_VERSION,
 		},
 		{
 			Endpoint:    "/movements/years/:year",
 			Method:      models.GET,
-			HandlerFunc: services.GetMovementsByYear,
+			HandlerFunc: services.GetMovementsByYear(),
 			ApiVersion:  API_VERSION,
 		},
 		{
 			Endpoint:    "/movements/years/:year/months/:month",
 			Method:      models.GET,
-			HandlerFunc: services.GetMovementsByMonth,
+			HandlerFunc: services.GetMovementsByMonth(),
 			ApiVersion:  API_VERSION,
 		},
 	}

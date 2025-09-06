@@ -21,31 +21,20 @@ var (
 	}
 )
 
-func StoreBankExtracts(gClient *googleapi.GoogleClient) gin.HandlerFunc {
+func StoreBankExtracts() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		log, err := logger.GetLogger(c, "transaction-tracker")
+		log := c.MustGet("logger").(*loggerModels.Logger)
+
+		gClient, err := googleapi.NewGoogleClient(c)
 		if err != nil {
-			models.NewResponseInvalidRequest(c, models.Response{
-				Message: fmt.Sprintf("logger not init: %s", err.Error()),
+			log.Error(loggerModels.LogProperties{
+				Event: "init_google_client_failed",
+				Error: err,
 			})
 
+			models.NewResponseInternalServerError(c)
 			return
 		}
-
-		email := c.PostForm("email")
-		if email == "" {
-			log.Info(loggerModels.LogProperties{
-				Event: "missing_email",
-			})
-
-			models.NewResponseInvalidRequest(c, models.Response{
-				Message: "email is required in x-www-form-urlencoded body",
-			})
-
-			return
-		}
-
-		gClient.SetEmail(email)
 
 		gmailClient, err := gClient.GmailService(c)
 		if err != nil {
@@ -79,8 +68,7 @@ func StoreBankExtracts(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 		}
 
 		models.NewResponseOK(c, models.Response{
-			Message: "success",
-			Data:    emailExtracts,
+			Data: emailExtracts,
 		})
 	}
 }
@@ -113,6 +101,10 @@ func downloadAttachments(c *gin.Context, log *loggerModels.Logger, gmailClient *
 
 				downloadsFailed = append(downloadsFailed, msg.Id)
 
+				return
+			}
+
+			if extract == nil {
 				return
 			}
 

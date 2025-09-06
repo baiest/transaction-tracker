@@ -4,31 +4,47 @@ import (
 	"strconv"
 	"transaction-tracker/api/models"
 	"transaction-tracker/googleapi"
+	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetEmailByHistoryID(gClient *googleapi.GoogleClient) gin.HandlerFunc {
+func GetEmailByHistoryID() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		email := c.PostForm("email")
-		if email == "" {
-			models.NewResponseInvalidRequest(c, models.Response{
-				Message: "email is required as a query parameter",
+		log := c.MustGet("logger").(*loggerModels.Logger)
+
+		gClient, err := googleapi.NewGoogleClient(c)
+		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "init_google_client_failed",
+				Error: err,
 			})
+
+			models.NewResponseInternalServerError(c)
 			return
 		}
 
 		historyID, err := strconv.ParseUint(c.Param("historyID"), 10, 64)
 		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "invalid_history_id",
+				Error: err,
+			})
+
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: "invalid historyID",
 			})
+
 			return
 		}
 
-		gClient.SetEmail(email)
 		gmailClient, err := gClient.GmailService(c)
 		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "init_gmail_service_failed",
+				Error: err,
+			})
+
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: err.Error(),
 			})
@@ -40,12 +56,21 @@ func GetEmailByHistoryID(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 
 		historyList, err := historyListCall.Do()
 		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "get_history_failed",
+				Error: err,
+			})
+
 			models.NewResponseInternalServerError(c)
 
 			return
 		}
 
 		if len(historyList.History) == 0 {
+			log.Error(loggerModels.LogProperties{
+				Event: "no_emails_found",
+			})
+
 			models.NewResponseInvalidRequest(c, models.Response{
 				Message: "no emails found for given historyID",
 			})
@@ -69,9 +94,11 @@ func GetEmailByHistoryID(gClient *googleapi.GoogleClient) gin.HandlerFunc {
 			}
 		}
 
-		c.JSON(200, gin.H{
-			"historyID": historyID,
-			"messages":  messages,
+		models.NewResponseOK(c, models.Response{
+			Data: map[string]interface{}{
+				"historyID": historyID,
+				"messages":  messages,
+			},
 		})
 	}
 }
