@@ -1,0 +1,105 @@
+name: Frontends CI
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "**"
+
+jobs:
+  discover-changed-frontends:
+    runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.set-matrix.outputs.projects }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch (for PRs)
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }}
+
+      - name: Detect changed frontends
+        id: set-matrix
+        run: |
+          set -e
+          set -o pipefail
+
+          BASE_REF=master
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            BASE_REF=${{ github.event.pull_request.base.ref }}
+          fi
+          echo "Comparing with base ref: $BASE_REF"
+
+          changed_files=$(git diff --name-only origin/$BASE_REF HEAD || true)
+          echo "Changed files: $changed_files"
+
+          projects=$(echo "$changed_files" | grep '^frontends/' | cut -d/ -f2 | sort -u)
+
+          if [ -z "$projects" ]; then
+            echo "projects=[\"none\"]" >> $GITHUB_OUTPUT
+          else
+            # jq -R -s -c convierte correctamente la lista a JSON compacto sin espacios
+            json=$(echo "$projects" | jq -R -s -c 'split("\n")[:-1]')
+            echo "projects=$json" >> $GITHUB_OUTPUT
+          fi
+
+          echo "Done"
+
+  frontend-tests:
+    needs: discover-changed-frontends
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ${{ fromJSON(needs.discover-changed-frontends.outputs.projects) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Skip if no changes
+        if: ${{ matrix.project == 'none' }}
+        run: echo "No frontend changes detected, skipping tests." && exit 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: frontends/${{ matrix.project }}/node_modules
+          key: npm-${{ matrix.project }}-${{ hashFiles('frontends/${{ matrix.project }}/package-lock.json') }}
+          restore-keys: |
+            npm-${{ matrix.project }}-
+
+      - name: Install dependencies
+        run: |
+          cd frontends/${{ matrix.project }}
+          npm install
+
+      - name: Run linter
+        run: |
+          cd frontends/${{ matrix.project }}
+          npm run lint
+
+      - name: Run tests with coverage
+        run: |
+          cd frontends/${{ matrix.project }}
+          npm run test:coverage
+
+      - name: Enforce coverage ≥80%
+        run: |
+          cd frontends/${{ matrix.project }}
+          COVERAGE=$(npx vitest run --coverage | grep -oP 'All files.*\|\s+\K[0-9]+(?=%)')
+          echo "Coverage: $COVERAGE%"
+          if [ "$COVERAGE" -lt 80 ]; then
+            echo "❌ Coverage below 80%"
+            exit 1
