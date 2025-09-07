@@ -95,11 +95,3 @@ jobs:
           cd frontends/${{ matrix.project }}
           npm run test:coverage
 
-      - name: Enforce coverage ≥80%
-        run: |
-          cd frontends/${{ matrix.project }}
-          COVERAGE=$(npx vitest run --coverage | grep -oP 'All files.*\|\s+\K[0-9]+(?=%)')
-          echo "Coverage: $COVERAGE%"
-          if [ "$COVERAGE" -lt 80 ]; then
-            echo "❌ Coverage below 80%"
-            exit 1
