@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"time"
 	"transaction-tracker/api/models"
+	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/database/mongo/schemas"
 	loggerModels "transaction-tracker/logger/models"
 
@@ -26,7 +27,7 @@ func CreateMovement() gin.HandlerFunc {
 			return
 		}
 
-		account := c.MustGet("account").(*models.Account)
+		account := c.MustGet("account").(*accounts.Account)
 
 		value, err := strconv.ParseFloat(c.PostForm("value"), 64)
 		if err != nil {

@@ -3,16 +3,22 @@ package models
 import (
 	"fmt"
 	"runtime/debug"
+	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Server struct {
 	Port   string
 	engine *gin.Engine
 }
+
+var (
+	accountService *accounts.AccountService
+)
 
 func NewServer(port int) *Server {
 	engine := gin.Default()
@@ -28,23 +34,57 @@ func NewServer(port int) *Server {
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// token := c.GetHeader("Authorization")
-		// if token == "" {
-		// 	NewResponseUnauthorized(c, Response{
-		// 		Message: "missing authorization token",
-		// 	})
+		if accountService == nil {
+			service, err := accounts.NewAccountService(c)
+			if err != nil {
+				NewResponseInternalServerError(c)
 
-		// 	return
-		// }
+				return
+			}
 
-		account, err := func() (*Account, error) {
-			return &Account{Email: "juanballesteros2001@gmail.com"}, nil
-		}()
+			accountService = service
+		}
 
+		tokenString, err := c.Cookie("token")
+		if err != nil {
+
+			NewResponseUnauthorized(c, Response{
+				Message: "missing token authorization",
+			})
+
+			return
+		}
+
+		token, err := accounts.VerifyToken(tokenString)
 		if err != nil {
 			NewResponseUnauthorized(c, Response{
-				Message: "invalid or expired token",
+				Message: "missing authorization",
 			})
+
+			return
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok || !token.Valid {
+			NewResponseUnauthorized(c, Response{
+				Message: "invalid token",
+			})
+
+			return
+		}
+
+		id, ok := claims["id"].(string)
+		if id == "" || !ok {
+			NewResponseUnauthorized(c, Response{
+				Message: "email not found",
+			})
+
+			return
+		}
+
+		account, err := accountService.GetAccount(c, id)
+		if err != nil {
+			NewResponseInternalServerError(c)
 
 			return
 		}

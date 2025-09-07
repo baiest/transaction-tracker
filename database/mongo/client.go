@@ -23,6 +23,7 @@ const (
 	GMAIL_MESSAGES      CollectionName = "gmail_messages"
 
 	MOVEMENTS CollectionName = "movements"
+	ACCOUNTS  CollectionName = "accounts"
 )
 
 type MongoClient struct {

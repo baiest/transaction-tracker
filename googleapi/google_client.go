@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"transaction-tracker/api/models"
+	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/database/mongo/schemas"
 	"transaction-tracker/googleapi/repositories"
 
@@ -33,9 +33,11 @@ func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
 		return nil, fmt.Errorf("GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET must be configurated")
 	}
 
-	email := ctx.Value("account").(*models.Account).Email
-	if email == "" {
-		return nil, fmt.Errorf("missing email")
+	email := ""
+
+	account, ok := ctx.Value("account").(*accounts.Account)
+	if ok {
+		email = account.Email
 	}
 
 	config := &oauth2.Config{
@@ -146,4 +148,36 @@ func (g *GoogleClient) SetEmail(email string) {
 
 func (g *GoogleClient) Email() string {
 	return g.email
+}
+
+func (g *GoogleClient) RefreshToken(ctx context.Context) (*oauth2.Token, error) {
+	if g.email == "" {
+		return nil, fmt.Errorf("email not set in GoogleClient")
+	}
+
+	account, err := g.repository.GetTokenByEmail(ctx, g.email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token from repository: %w", err)
+	}
+
+	if account.Token == nil {
+		return nil, fmt.Errorf("no token found for email: %s", g.email)
+	}
+
+	ts := g.Config.TokenSource(ctx, account.Token)
+	newToken, err := ts.Token()
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh token: %w", err)
+	}
+
+	if newToken.AccessToken != account.Token.AccessToken || newToken.RefreshToken != "" {
+		account.Token = newToken
+		if err := g.repository.SaveToken(ctx, account); err != nil {
+			return nil, fmt.Errorf("failed to save refreshed token: %w", err)
+		}
+	}
+
+	g.token = newToken
+
+	return newToken, nil
 }

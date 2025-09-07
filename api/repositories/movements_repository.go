@@ -54,6 +54,7 @@ func (r *MovementsRepository) GetMovementsByDateRange(ctx context.Context, start
 	if err != nil {
 		return nil, err
 	}
+
 	defer cursor.Close(ctx)
 
 	for cursor.Next(ctx) {

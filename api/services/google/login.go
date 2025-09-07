@@ -1,8 +1,10 @@
 package google
 
 import (
+	"errors"
 	"fmt"
 	"transaction-tracker/api/models"
+	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/googleapi"
 	loggerModels "transaction-tracker/logger/models"
 
@@ -53,7 +55,7 @@ func GoogleLogin() gin.HandlerFunc {
 			return
 		}
 
-		historyID, expirationTime, err := gmailService.CreateWatch(c, topicName)
+		_, _, err = gmailService.CreateWatch(c, topicName)
 		if err != nil {
 			log.Error(loggerModels.LogProperties{
 				Event: "create_watch_failed",
@@ -65,8 +67,68 @@ func GoogleLogin() gin.HandlerFunc {
 			return
 		}
 
+		accountsService, err := accounts.NewAccountService(c)
+		if err != nil {
+			models.NewResponseInternalServerError(c)
+
+			return
+		}
+
+		email := gClient.Email()
+
+		account, err := accountsService.GetAccountByEmail(c, email)
+		if err != nil {
+			if !errors.Is(err, accounts.ErrAccountNotFound) {
+				log.Error(loggerModels.LogProperties{
+					Event: "get_account_failed",
+					Error: err,
+				})
+
+				models.NewResponseInternalServerError(c)
+
+				return
+			}
+
+			account, err = accounts.NewAccount(email)
+			if err != nil {
+				log.Error(loggerModels.LogProperties{
+					Event: "create_new_account_failed",
+					Error: err,
+				})
+
+				models.NewResponseInternalServerError(c)
+
+				return
+			}
+
+			err = accountsService.CreateAccount(c, account)
+			if err != nil {
+				models.NewResponseInternalServerError(c)
+
+				return
+			}
+		}
+
+		token, refreshToken, err := account.GenerateTokens()
+		if err != nil {
+			log.Error(loggerModels.LogProperties{
+				Event: "create_token_failed",
+				Error: err,
+			})
+
+			models.NewResponseInternalServerError(c)
+
+			return
+		}
+
+		c.SetCookie("token", token, 3600, "/", "localhost", false, true)
+		c.SetCookie("refresh_token", refreshToken, 604800, "/", "localhost", false, true) // 7 días
+
 		models.NewResponseOK(c, models.Response{
-			Message: fmt.Sprintf("HistoryID: %d ExpirationTime: %d", historyID, expirationTime),
+			Data: map[string]string{
+				"token":         token,
+				"refresh_token": refreshToken,
+			},
 		})
 	}
 }
