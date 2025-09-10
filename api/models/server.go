@@ -7,6 +7,7 @@ import (
 	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -25,6 +26,14 @@ func NewServer(port int) *Server {
 
 	engine.Use(InitLogger())
 	engine.Use(RecoveryWithJSON())
+
+	engine.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 
 	return &Server{
 		Port:   fmt.Sprintf(":%d", port),

@@ -123,12 +123,6 @@ func GoogleLogin() gin.HandlerFunc {
 
 		c.SetCookie("token", token, 3600, "/", "localhost", false, true)
 		c.SetCookie("refresh_token", refreshToken, 604800, "/", "localhost", false, true) // 7 días
-
-		models.NewResponseOK(c, models.Response{
-			Data: map[string]string{
-				"token":         token,
-				"refresh_token": refreshToken,
-			},
-		})
+		c.Redirect(302, "http://localhost:3000")
 	}
 }
