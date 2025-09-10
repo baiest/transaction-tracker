@@ -10,7 +10,6 @@ import (
 	"transaction-tracker/api/services/movements"
 	"transaction-tracker/database/mongo/schemas"
 	"transaction-tracker/googleapi"
-	"transaction-tracker/googleapi/repositories"
 
 	"google.golang.org/api/gmail/v1"
 )
@@ -70,6 +69,11 @@ func (g *GmailService) ProcessMessage(ctx context.Context, messageID string, not
 	if errors.Is(err, googleapi.ErrMessageNotFound) {
 		message = &schemas.Message{Status: "pending", ID: messageID, NotificationID: notificationID}
 
+		err := g.service.SaveMessage(ctx, message)
+		if err != nil {
+			return nil, err
+		}
+
 		return g.filterAndCreateMovement(ctx, message)
 	}
 
@@ -85,9 +89,11 @@ func (g *GmailService) ProcessMessage(ctx context.Context, messageID string, not
 }
 
 func (g *GmailService) filterAndCreateMovement(ctx context.Context, message *schemas.Message) (*schemas.Message, error) {
-	err := g.service.SaveMessage(ctx, message)
-	if err != nil && !errors.Is(err, repositories.ErrMessageAlreadyExists) {
-		return nil, err
+	message.Status = "pending"
+
+	errUpdate := g.service.UpdateMessage(ctx, message)
+	if errUpdate != nil {
+		return nil, errUpdate
 	}
 
 	msg, err := g.service.GetMessageByID(ctx, message.ID)

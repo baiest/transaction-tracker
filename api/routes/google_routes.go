@@ -22,10 +22,11 @@ var (
 			NoRequiresAuth: true,
 		},
 		{
-			Endpoint:    "/google/auth/refresh",
-			Method:      models.POST,
-			HandlerFunc: services.Refresh(),
-			ApiVersion:  API_VERSION,
+			Endpoint:       "/google/auth/refresh",
+			Method:         models.POST,
+			HandlerFunc:    services.Refresh(),
+			ApiVersion:     API_VERSION,
+			NoRequiresAuth: true,
 		},
 	}
 )

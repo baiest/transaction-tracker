@@ -113,7 +113,7 @@ func (d *Davivienda) excecuteExtract() ([]*schemas.Movement, error) {
 	}
 
 	if daviviendaExtractor.Password == "" {
-		return nil, fmt.Errorf("missing extract paassword")
+		return nil, fmt.Errorf("missing extract password")
 	}
 
 	movementsExtracted := daviviendaExtractor.GetMovements(d.extract.FilePath)
