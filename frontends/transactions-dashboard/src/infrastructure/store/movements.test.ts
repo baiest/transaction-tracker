@@ -90,4 +90,13 @@ describe("useMovementsStore", () => {
     expect(store.isLoading).toBe(false);
     expect(store.error).toBe("Failed to load");
   });
+
+  it("should update the year when setYear is called", () => {
+    const { setYear } = useMovementsStore.getState();
+
+    setYear(2030);
+
+    const store = useMovementsStore.getState();
+    expect(store.year).toBe(2030);
+  });
 });

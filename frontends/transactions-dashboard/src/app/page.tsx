@@ -5,7 +5,7 @@ import { useMovementsStore } from "@/infrastructure/store/movements";
 import { useCallback, useEffect } from "react";
 
 export default function Home() {
-  const { movementsByYear, fetchMomentesByYear } = useMovementsStore();
+  const { movementsByYear, fetchMomentesByYear, year } = useMovementsStore();
 
   const format = useFormatCurrency();
 
@@ -21,8 +21,8 @@ export default function Home() {
   }, [movementsByYear]);
 
   useEffect(() => {
-    fetchMomentesByYear(2025);
-  }, [fetchMomentesByYear]);
+    fetchMomentesByYear(year);
+  }, [fetchMomentesByYear, year]);
 
   return (
     <>

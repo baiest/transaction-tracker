@@ -9,6 +9,7 @@ export interface MovementsStore {
   isLoading: boolean;
   error: string | null;
 
+  setYear: (year: number) => void;
   fetchMomentesByYear: (year: number) => Promise<void>;
 }
 
@@ -23,10 +24,11 @@ export const useMovementsStore = create<MovementsStore>((set) => {
       balance: 0,
       months: []
     },
-    year: 0,
+    year: new Date().getFullYear(),
     isLoading: false,
     error: null,
 
+    setYear: (year: number) => set({ year }),
     fetchMomentesByYear: async (year: number) => {
       set({ isLoading: true, error: null });
       try {

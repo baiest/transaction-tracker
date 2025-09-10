@@ -2,21 +2,21 @@ import { renderHook } from "@testing-library/react";
 import { useFormatCurrency } from "./useFormatCurrency";
 
 describe("useFormatCurrency", () => {
-  it("should format number in default COP without decimals", () => {
+  it.concurrent("should format number in default COP without decimals", () => {
     const { result } = renderHook(() => useFormatCurrency());
 
     const formatCurrency = result.current;
     expect(formatCurrency(1000)).toMatch(/^\$\s?1\.000$/);
   });
 
-  it("should format number in default COP with decimals", () => {
+  it.concurrent("should format number in default COP with decimals", () => {
     const { result } = renderHook(() => useFormatCurrency());
 
     const formatCurrency = result.current;
     expect(formatCurrency(1000.5, { withDecimals: true })).toBe("$ 1.000,50");
   });
 
-  it("should allow overriding currency", () => {
+  it.concurrent("should allow overriding currency", () => {
     const { result } = renderHook(() => useFormatCurrency());
 
     const formatCurrency = result.current;
@@ -25,7 +25,7 @@ describe("useFormatCurrency", () => {
     );
   });
 
-  it("should allow overriding locale", () => {
+  it.concurrent("should allow overriding locale", () => {
     const { result } = renderHook(() => useFormatCurrency());
 
     const formatCurrency = result.current;
@@ -34,7 +34,7 @@ describe("useFormatCurrency", () => {
     );
   });
 
-  it("should respect decimals in custom locale", () => {
+  it.concurrent("should respect decimals in custom locale", () => {
     const { result } = renderHook(() => useFormatCurrency());
 
     const formatCurrency = result.current;
@@ -47,13 +47,16 @@ describe("useFormatCurrency", () => {
     ).toBe("$1,234.56");
   });
 
-  it("should memoize formatter and return same function instance", () => {
-    const { result, rerender } = renderHook(() => useFormatCurrency());
-    const fn1 = result.current;
+  it.concurrent(
+    "should memoize formatter and return same function instance",
+    () => {
+      const { result, rerender } = renderHook(() => useFormatCurrency());
+      const fn1 = result.current;
 
-    rerender();
+      rerender();
 
-    const fn2 = result.current;
-    expect(fn1).toBe(fn2);
-  });
+      const fn2 = result.current;
+      expect(fn1).toBe(fn2);
+    }
+  );
 });

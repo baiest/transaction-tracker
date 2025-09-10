@@ -86,7 +86,7 @@ describe("Home Page", () => {
   });
 
   it("calculates when income is zero", () => {
-    const { fetchMomentesByYear, movementsByYear } = useMovementsStore();
+    const { fetchMomentesByYear } = useMovementsStore();
 
     (
       fetchMomentesByYear as unknown as ReturnType<typeof vi.fn>
