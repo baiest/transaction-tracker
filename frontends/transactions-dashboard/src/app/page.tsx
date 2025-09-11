@@ -2,10 +2,66 @@
 
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { useMovementsStore } from "@/infrastructure/store/movements";
-import { useCallback, useEffect } from "react";
+import { useMemo, useCallback, useEffect } from "react";
+import LineChart from "@/ui/charts/LineChart";
+import { MONTHS } from "@/utils/dates";
 
 export default function Home() {
-  const { movementsByYear, fetchMomentesByYear, year } = useMovementsStore();
+  const {
+    movementsByYear,
+    year,
+    showAllYears,
+    allYearsRaw,
+    fetchMomentsByYear,
+    fetchAllYearsData
+  } = useMovementsStore();
+
+  const values = useMemo(
+    () => [
+      {
+        name: "Earned",
+        data: movementsByYear.months?.map((m) => m.income) || [],
+        color: "green"
+      },
+      {
+        name: "Expense",
+        data: movementsByYear.months?.map((m) => m.outcome) || [],
+        color: "red"
+      }
+    ],
+    [movementsByYear]
+  );
+
+  const allMonthsByYears = useCallback(
+    (type: "income" | "outcome") =>
+      allYearsRaw
+        ?.map((m) => m.months)
+        .flat()
+        .map((m) => m[type]) || [],
+    [allYearsRaw]
+  );
+
+  const allDataByYears = useCallback(
+    (type: "totalIncome" | "totalOutcome" | "balance") =>
+      allYearsRaw?.reduce((acc, m) => m[type] + acc, 0) || 0,
+    [allYearsRaw]
+  );
+
+  const allYearsValues = useMemo(
+    () => [
+      {
+        name: "Earned",
+        data: allMonthsByYears("income"),
+        color: "green"
+      },
+      {
+        name: "Expense",
+        data: allMonthsByYears("outcome"),
+        color: "red"
+      }
+    ],
+    [allYearsRaw, allMonthsByYears]
+  );
 
   const format = useFormatCurrency();
 
@@ -14,22 +70,34 @@ export default function Home() {
       return 0;
     }
 
-    const percentage =
-      (movementsByYear.balance / movementsByYear.totalIncome) * 100;
+    let balance = movementsByYear.balance;
+    if (showAllYears) {
+      balance = allDataByYears("balance");
+    }
+
+    const percentage = (balance / movementsByYear.totalIncome) * 100;
 
     return parseFloat(percentage.toFixed(2));
-  }, [movementsByYear]);
+  }, [movementsByYear, showAllYears, allYearsRaw, allDataByYears]);
 
   useEffect(() => {
-    fetchMomentesByYear(year);
-  }, [fetchMomentesByYear, year]);
+    fetchMomentsByYear(year);
+  }, [fetchMomentsByYear, year]);
+
+  useEffect(() => {
+    fetchAllYearsData([2021, 2022, 2023, 2024, 2025]);
+  }, [fetchAllYearsData, showAllYears]);
 
   return (
     <>
       <div className="dark:bg-gray-800 p-4 rounded">
         <h3 className="text-sm text-gray-400">Income</h3>
         <p className="text-2xl font-semibold text-green-400">
-          {format(movementsByYear.totalIncome)}
+          {format(
+            showAllYears
+              ? allDataByYears("totalIncome")
+              : movementsByYear.totalIncome
+          )}
         </p>
         <div className="flex gap-2 mt-2 text-xs text-gray-300">
           <span>Primary</span>
@@ -40,7 +108,11 @@ export default function Home() {
       <div className="dark:bg-gray-800 p-4 rounded">
         <h3 className="text-sm text-gray-400">Expenses</h3>
         <p className="text-2xl font-semibold text-red-500">
-          {format(movementsByYear.totalOutcome)}
+          {format(
+            showAllYears
+              ? allDataByYears("totalOutcome")
+              : movementsByYear.totalOutcome
+          )}
         </p>
         <div className="flex gap-2 mt-2 text-xs text-gray-300">
           <span>Fixed</span>
@@ -51,17 +123,32 @@ export default function Home() {
       <div className="dark:bg-gray-800 p-4 rounded">
         <h3 className="text-sm text-gray-400">Net Balance</h3>
         <p className="text-2xl font-semibold text-yellow-400">
-          {format(movementsByYear.balance)}
+          {format(
+            showAllYears ? allDataByYears("balance") : movementsByYear.balance
+          )}
         </p>
         <span className="text-xs text-gray-300 mt-1 block">
           {calculateVerticalPercentage()}% Expenses to Income Ratio
         </span>
       </div>
 
-      <div className="md:col-span-3 dark:bg-gray-800 p-4 rounded">
+      <div className="h-full md:col-span-3 dark:bg-gray-800 p-4 rounded">
         <h4 className="text-sm text-gray-400 mb-2">Income vs Expenses</h4>
-        <div className="h-40 dark:bg-gray-700 rounded flex items-center justify-center text-gray-400">
-          Chart Placeholder
+        <div className="min-h-[300px] dark:bg-gray-700 rounded flex items-center justify-center text-gray-400">
+          <LineChart
+            xData={
+              showAllYears
+                ? allYearsRaw
+                    ?.map((m) => m.months)
+                    .flat()
+                    .map(
+                      (_, i) => `${MONTHS[i % 12]} ${2021 + Math.floor(i / 12)}`
+                    )
+                : MONTHS
+            }
+            series={showAllYears ? allYearsValues : values}
+            height="calc(100dvh - 500px)"
+          />
         </div>
       </div>
 

@@ -42,14 +42,14 @@ jobs:
           projects=$(echo "$changed_files" | grep '^frontends/' | cut -d/ -f2 | sort -u)
 
           if [ -z "$projects" ]; then
-            echo "projects=[\"none\"]" >> $GITHUB_OUTPUT
+            echo 'projects=["none"]' >> $GITHUB_OUTPUT
           else
-            # jq -R -s -c convierte correctamente la lista a JSON compacto sin espacios
             json=$(echo "$projects" | jq -R -s -c 'split("\n")[:-1]')
             echo "projects=$json" >> $GITHUB_OUTPUT
           fi
 
           echo "Done"
+
 
   frontend-tests:
     needs: discover-changed-frontends

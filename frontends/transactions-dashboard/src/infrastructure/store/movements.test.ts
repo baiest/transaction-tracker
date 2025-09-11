@@ -24,7 +24,7 @@ describe("useMovementsStore", () => {
       year: 0,
       isLoading: false,
       error: null,
-      fetchMomentesByYear: useMovementsStore.getState().fetchMomentesByYear
+      fetchMomentsByYear: useMovementsStore.getState().fetchMomentsByYear
     });
 
     mockExecute = (GetMovementsByYear as ReturnType<typeof vi.fn>).mock
@@ -40,23 +40,11 @@ describe("useMovementsStore", () => {
       balance: 0,
       months: []
     });
+    expect(state.allYearsRaw).toEqual([]);
+    expect(state.showAllYears).toBeFalsy();
     expect(state.year).toBe(0);
-    expect(state.isLoading).toBe(false);
+    expect(state.isLoading).toBeFalsy();
     expect(state.error).toBeNull();
-  });
-
-  it("should have the correct initial state", () => {
-    const store = useMovementsStore.getState();
-
-    expect(store.year).toBe(0);
-    expect(store.isLoading).toBe(false);
-    expect(store.error).toBeNull();
-    expect(store.movementsByYear).toEqual({
-      totalIncome: 0,
-      totalOutcome: 0,
-      balance: 0,
-      months: []
-    });
   });
 
   it("should fetch movements successfully", async () => {
@@ -69,7 +57,7 @@ describe("useMovementsStore", () => {
 
     mockExecute.mockResolvedValueOnce(fakeData);
 
-    await useMovementsStore.getState().fetchMomentesByYear(2024);
+    await useMovementsStore.getState().fetchMomentsByYear(2024);
 
     const store = useMovementsStore.getState();
 
@@ -80,12 +68,44 @@ describe("useMovementsStore", () => {
     expect(store.year).toBe(2024);
   });
 
+  it("should fetch all years movements successfully", async () => {
+    const fakeData: MovementByYear = {
+      totalIncome: 1000,
+      totalOutcome: 500,
+      balance: 500,
+      months: []
+    };
+
+    mockExecute.mockResolvedValue(fakeData);
+
+    await useMovementsStore.getState().fetchAllYearsData([2024, 2023, 2022]);
+
+    const store = useMovementsStore.getState();
+
+    expect(mockExecute).toHaveBeenCalledWith(2024);
+    expect(mockExecute).toHaveBeenCalledWith(2023);
+    expect(mockExecute).toHaveBeenCalledWith(2022);
+    expect(store.isLoading).toBe(false);
+    expect(store.error).toBeNull();
+    expect(store.allYearsRaw).length(3);
+    expect(store.allYearsRaw).toEqual([fakeData, fakeData, fakeData]);
+  });
+
   it("should handle errors correctly", async () => {
     mockExecute.mockRejectedValueOnce(new Error("Failed to load"));
 
-    await useMovementsStore.getState().fetchMomentesByYear(2025);
+    await useMovementsStore.getState().fetchMomentsByYear(2025);
 
-    const store = useMovementsStore.getState();
+    let store = useMovementsStore.getState();
+
+    expect(store.isLoading).toBe(false);
+    expect(store.error).toBe("Failed to load");
+
+    mockExecute.mockRejectedValueOnce(new Error("Failed to load"));
+
+    await useMovementsStore.getState().fetchAllYearsData([2025]);
+
+    store = useMovementsStore.getState();
 
     expect(store.isLoading).toBe(false);
     expect(store.error).toBe("Failed to load");

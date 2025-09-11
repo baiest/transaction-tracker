@@ -87,6 +87,8 @@ func Refresh() gin.HandlerFunc {
 			return
 		}
 
+		googleService.SetEmail(account.Email)
+
 		_, err = googleService.RefreshToken(c)
 		if err != nil {
 			log.Error(loggerModels.LogProperties{
