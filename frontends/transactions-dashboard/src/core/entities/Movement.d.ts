@@ -7,7 +7,7 @@ export interface MovementByYear {
   totalIncome: number;
   totalOutcome: number;
   balance: number;
-  months: MovementByYear[];
+  months: MovementYear[];
 }
 
 export interface IMovementsRepository {

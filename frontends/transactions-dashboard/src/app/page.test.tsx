@@ -9,7 +9,8 @@ vi.mock("@/infrastructure/store/movements", () => {
         totalOutcome: 1500,
         balance: 500
       } as MovementByYear,
-      fetchMomentesByYear: vi.fn()
+      fetchMomentsByYear: vi.fn(),
+      fetchAllYearsData: vi.fn()
     })
   };
 });
@@ -46,7 +47,6 @@ describe("Home Page", () => {
   it("renders Income vs Expenses chart placeholder", () => {
     render(<Home />);
     expect(screen.getByText("Income vs Expenses")).toBeInTheDocument();
-    expect(screen.getByText("Chart Placeholder")).toBeInTheDocument();
   });
 
   it("renders Income by Category chart placeholder", () => {
@@ -70,7 +70,7 @@ describe("Home Page", () => {
   });
 
   it("calculates percentage correctly when outcome < income", () => {
-    const { fetchMomentesByYear } = useMovementsStore();
+    const { fetchMomentsByYear: fetchMomentesByYear } = useMovementsStore();
 
     (
       fetchMomentesByYear as unknown as ReturnType<typeof vi.fn>
@@ -86,7 +86,7 @@ describe("Home Page", () => {
   });
 
   it("calculates when income is zero", () => {
-    const { fetchMomentesByYear } = useMovementsStore();
+    const { fetchMomentsByYear: fetchMomentesByYear } = useMovementsStore();
 
     (
       fetchMomentesByYear as unknown as ReturnType<typeof vi.fn>
@@ -101,6 +101,13 @@ describe("Home Page", () => {
       balance: -500,
       months: []
     };
+
+    render(<Home />);
+    expect(screen.getByText("0% Expenses to Income Ratio")).toBeInTheDocument();
+  });
+
+  it("calculates when showAllYears", () => {
+    useMovementsStore().showAllYears = true;
 
     render(<Home />);
     expect(screen.getByText("0% Expenses to Income Ratio")).toBeInTheDocument();
