@@ -2,102 +2,121 @@
 
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { useMovementsStore } from "@/infrastructure/store/movements";
-import { useMemo, useCallback, useEffect } from "react";
+import { useMemo, useEffect } from "react";
 import LineChart from "@/ui/charts/LineChart";
 import { MONTHS } from "@/utils/dates";
+import type {
+  MovementByMonth,
+  MovementByYear,
+  MovementMonth,
+  MovementYear
+} from "@/core/entities/Movement";
+
+type MovementsTotalTypes = "totalIncome" | "totalOutcome" | "balance";
+type MovementTypes = "income" | "outcome";
+
+const getData = (data: MovementYear[] | MovementMonth[], type: MovementTypes) =>
+  data?.map((m) => m[type]) || [];
+
+const getTotal = (
+  data: MovementByYear[] | MovementByMonth[],
+  type: MovementsTotalTypes
+) => data?.reduce((acc, m) => acc + m[type], 0) || 0;
 
 export default function Home() {
   const {
     movementsByYear,
+    movementsByMonth,
     year,
-    showAllYears,
+    month,
+    timeSelected,
     allYearsRaw,
     fetchMomentsByYear,
+    fetchMomentsByMonth,
     fetchAllYearsData
   } = useMovementsStore();
 
-  const values = useMemo(
-    () => [
-      {
-        name: "Earned",
-        data: movementsByYear.months?.map((m) => m.income) || [],
-        color: "green"
-      },
-      {
-        name: "Expense",
-        data: movementsByYear.months?.map((m) => m.outcome) || [],
-        color: "red"
-      }
-    ],
-    [movementsByYear]
-  );
-
-  const allMonthsByYears = useCallback(
-    (type: "income" | "outcome") =>
-      allYearsRaw
-        ?.map((m) => m.months)
-        .flat()
-        .map((m) => m[type]) || [],
-    [allYearsRaw]
-  );
-
-  const allDataByYears = useCallback(
-    (type: "totalIncome" | "totalOutcome" | "balance") =>
-      allYearsRaw?.reduce((acc, m) => m[type] + acc, 0) || 0,
-    [allYearsRaw]
-  );
-
-  const allYearsValues = useMemo(
-    () => [
-      {
-        name: "Earned",
-        data: allMonthsByYears("income"),
-        color: "green"
-      },
-      {
-        name: "Expense",
-        data: allMonthsByYears("outcome"),
-        color: "red"
-      }
-    ],
-    [allYearsRaw, allMonthsByYears]
-  );
-
   const format = useFormatCurrency();
 
-  const calculateVerticalPercentage = useCallback((): number => {
-    if (movementsByYear.totalIncome === 0) {
-      return 0;
+  useEffect(() => {
+    switch (timeSelected) {
+      case "year":
+        fetchMomentsByYear(year);
+        break;
+      case "month":
+        fetchMomentsByMonth(year, month);
+        break;
+      case "all_years":
+        fetchAllYearsData([2021, 2022, 2023, 2024, 2025]);
+        break;
+    }
+  }, [
+    timeSelected,
+    year,
+    month,
+    fetchMomentsByYear,
+    fetchMomentsByMonth,
+    fetchAllYearsData
+  ]);
+
+  const chartData = useMemo(() => {
+    let rawData: MovementYear[] | MovementMonth[] = [];
+    let labels: string[] = [];
+    let totalIncome = 0;
+    let totalOutcome = 0;
+    let balance = 0;
+
+    switch (timeSelected) {
+      case "all_years":
+        rawData = allYearsRaw?.flatMap((y) => y.months);
+        labels = rawData?.map(
+          (_, i) => `${MONTHS[i % 12]} ${2021 + Math.floor(i / 12)}`
+        );
+        totalIncome = getTotal(allYearsRaw, "totalIncome");
+        totalOutcome = getTotal(allYearsRaw, "totalOutcome");
+        balance = getTotal(allYearsRaw, "balance");
+        break;
+      case "year":
+        rawData = movementsByYear.months;
+        labels = MONTHS;
+        totalIncome = movementsByYear.totalIncome;
+        totalOutcome = movementsByYear.totalOutcome;
+        balance = movementsByYear.balance;
+        break;
+      case "month":
+        rawData = movementsByMonth.days;
+        labels = Array.from({ length: 31 }, (_, index) => `${index + 1}`);
+        totalIncome = movementsByMonth.totalIncome;
+        totalOutcome = movementsByMonth.totalOutcome;
+        balance = movementsByMonth.balance;
+        break;
+      default:
+        rawData = [];
+        labels = [];
     }
 
-    let balance = movementsByYear.balance;
-    if (showAllYears) {
-      balance = allDataByYears("balance");
-    }
+    const series = [
+      { name: "Earned", data: getData(rawData, "income"), color: "green" },
+      { name: "Expense", data: getData(rawData, "outcome"), color: "red" }
+    ];
 
-    const percentage = (balance / movementsByYear.totalIncome) * 100;
+    const percentage =
+      totalIncome > 0
+        ? parseFloat(((balance / totalIncome) * 100).toFixed(2))
+        : 0;
 
-    return parseFloat(percentage.toFixed(2));
-  }, [movementsByYear, showAllYears, allYearsRaw, allDataByYears]);
+    return { series, labels, totalIncome, totalOutcome, balance, percentage };
+  }, [timeSelected, allYearsRaw, movementsByYear, movementsByMonth]);
 
-  useEffect(() => {
-    fetchMomentsByYear(year);
-  }, [fetchMomentsByYear, year]);
-
-  useEffect(() => {
-    fetchAllYearsData([2021, 2022, 2023, 2024, 2025]);
-  }, [fetchAllYearsData, showAllYears]);
+  const { series, labels, totalIncome, totalOutcome, balance, percentage } =
+    chartData;
 
   return (
     <>
       <div className="dark:bg-gray-800 p-4 rounded">
-        <h3 className="text-sm text-gray-400">Income</h3>
+        <h3 className="text-sm text-gray-400">Total Income</h3>
         <p className="text-2xl font-semibold text-green-400">
-          {format(
-            showAllYears
-              ? allDataByYears("totalIncome")
-              : movementsByYear.totalIncome
-          )}
+          {format(totalIncome)}
         </p>
         <div className="flex gap-2 mt-2 text-xs text-gray-300">
           <span>Primary</span>
@@ -106,13 +125,9 @@ export default function Home() {
       </div>
 
       <div className="dark:bg-gray-800 p-4 rounded">
-        <h3 className="text-sm text-gray-400">Expenses</h3>
+        <h3 className="text-sm text-gray-400">Total Expenses</h3>
         <p className="text-2xl font-semibold text-red-500">
-          {format(
-            showAllYears
-              ? allDataByYears("totalOutcome")
-              : movementsByYear.totalOutcome
-          )}
+          {format(totalOutcome)}
         </p>
         <div className="flex gap-2 mt-2 text-xs text-gray-300">
           <span>Fixed</span>
@@ -123,12 +138,10 @@ export default function Home() {
       <div className="dark:bg-gray-800 p-4 rounded">
         <h3 className="text-sm text-gray-400">Net Balance</h3>
         <p className="text-2xl font-semibold text-yellow-400">
-          {format(
-            showAllYears ? allDataByYears("balance") : movementsByYear.balance
-          )}
+          {format(balance)}
         </p>
         <span className="text-xs text-gray-300 mt-1 block">
-          {calculateVerticalPercentage()}% Expenses to Income Ratio
+          {percentage}% Balance / Income Ratio
         </span>
       </div>
 
@@ -136,17 +149,8 @@ export default function Home() {
         <h4 className="text-sm text-gray-400 mb-2">Income vs Expenses</h4>
         <div className="min-h-[300px] dark:bg-gray-700 rounded flex items-center justify-center text-gray-400">
           <LineChart
-            xData={
-              showAllYears
-                ? allYearsRaw
-                    ?.map((m) => m.months)
-                    .flat()
-                    .map(
-                      (_, i) => `${MONTHS[i % 12]} ${2021 + Math.floor(i / 12)}`
-                    )
-                : MONTHS
-            }
-            series={showAllYears ? allYearsValues : values}
+            xData={labels}
+            series={series}
             height="calc(100dvh - 500px)"
           />
         </div>

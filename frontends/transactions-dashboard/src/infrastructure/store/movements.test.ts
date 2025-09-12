@@ -24,6 +24,8 @@ describe("useMovementsStore", () => {
       year: 0,
       isLoading: false,
       error: null,
+      timeSelected: "year",
+
       fetchMomentsByYear: useMovementsStore.getState().fetchMomentsByYear
     });
 
@@ -41,7 +43,7 @@ describe("useMovementsStore", () => {
       months: []
     });
     expect(state.allYearsRaw).toEqual([]);
-    expect(state.showAllYears).toBeFalsy();
+    expect(state.timeSelected).toBeTruthy();
     expect(state.year).toBe(0);
     expect(state.isLoading).toBeFalsy();
     expect(state.error).toBeNull();
@@ -55,13 +57,13 @@ describe("useMovementsStore", () => {
       months: []
     };
 
-    mockExecute.mockResolvedValueOnce(fakeData);
+    mockExecute.mockResolvedValueOnce([fakeData]);
 
     await useMovementsStore.getState().fetchMomentsByYear(2024);
 
     const store = useMovementsStore.getState();
 
-    expect(mockExecute).toHaveBeenCalledWith(2024);
+    expect(mockExecute).toHaveBeenCalledWith([2024]);
     expect(store.isLoading).toBe(false);
     expect(store.error).toBeNull();
     expect(store.movementsByYear).toEqual(fakeData);
@@ -76,15 +78,13 @@ describe("useMovementsStore", () => {
       months: []
     };
 
-    mockExecute.mockResolvedValue(fakeData);
+    mockExecute.mockResolvedValue([fakeData, fakeData, fakeData]);
 
     await useMovementsStore.getState().fetchAllYearsData([2024, 2023, 2022]);
 
     const store = useMovementsStore.getState();
 
-    expect(mockExecute).toHaveBeenCalledWith(2024);
-    expect(mockExecute).toHaveBeenCalledWith(2023);
-    expect(mockExecute).toHaveBeenCalledWith(2022);
+    expect(mockExecute).toHaveBeenCalledWith([2024, 2023, 2022]);
     expect(store.isLoading).toBe(false);
     expect(store.error).toBeNull();
     expect(store.allYearsRaw).length(3);

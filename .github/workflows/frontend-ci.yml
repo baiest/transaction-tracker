@@ -34,6 +34,7 @@ jobs:
           if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
             BASE_REF=${{ github.event.pull_request.base.ref }}
           fi
+
           echo "Comparing with base ref: $BASE_REF"
 
           changed_files=$(git diff --name-only origin/$BASE_REF HEAD || true)
@@ -43,10 +44,12 @@ jobs:
 
           if [ -z "$projects" ]; then
             echo 'projects=["none"]' >> $GITHUB_OUTPUT
-          else
-            json=$(echo "$projects" | jq -R -s -c 'split("\n")[:-1]')
-            echo "projects=$json" >> $GITHUB_OUTPUT
+            echo "No frontend changes, exiting successfully."
+            exit 0
           fi
+
+          json=$(echo "$projects" | jq -R -s -c 'split("\n")[:-1]')
+          echo "projects=$json" >> $GITHUB_OUTPUT
 
           echo "Done"
 

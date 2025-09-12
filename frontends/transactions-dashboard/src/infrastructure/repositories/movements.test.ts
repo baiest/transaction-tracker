@@ -54,4 +54,13 @@ describe("MovementsRepository", () => {
       "Network error"
     );
   });
+
+  it("should propagate errors from client", async () => {
+    const repo = new MovementsRepository();
+    mockClient.mockRejectedValueOnce(new Error("Network error"));
+
+    await expect(repo.getMovementsByMonth(2023, 1)).rejects.toThrow(
+      "Network error"
+    );
+  });
 });

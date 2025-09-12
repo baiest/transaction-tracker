@@ -1,25 +1,13 @@
-import type { MovementYear, MovementByYear } from "@/core/entities/Movement";
+import { GetMovementsByMonth } from "@/core/usecases/getMovementsByMonth";
 import { GetMovementsByYear } from "@/core/usecases/getMovementsByYear";
 import { MovementsRepository } from "@/infrastructure/repositories/movements";
 import { create } from "zustand";
+import { MovementsStore, Time } from "./models";
 
-export interface MovementsStore {
-  movementsByYear: MovementByYear;
-  allYearsRaw: MovementByYear[];
-  year: number;
-  showAllYears: boolean;
-  isLoading: boolean;
-  error: string | null;
-
-  setYear: (year: number) => void;
-  setShowAllYears: (value: boolean) => void;
-  fetchMomentsByYear: (year: number) => Promise<void>;
-  fetchAllYearsData: (years: number[]) => Promise<void>;
-}
-
-export const useMovementsStore = create<MovementsStore>((set, get) => {
+export const useMovementsStore = create<MovementsStore>((set) => {
   const movementsRepository = new MovementsRepository();
   const getMovementsByYear = new GetMovementsByYear(movementsRepository);
+  const getMovementsByMonth = new GetMovementsByMonth(movementsRepository);
 
   return {
     movementsByYear: {
@@ -28,19 +16,37 @@ export const useMovementsStore = create<MovementsStore>((set, get) => {
       balance: 0,
       months: []
     },
+    movementsByMonth: {
+      totalIncome: 0,
+      totalOutcome: 0,
+      balance: 0,
+      days: []
+    },
     allYearsRaw: [],
+    month: new Date().getMonth() - 1,
     year: new Date().getFullYear(),
-    showAllYears: false,
+    timeSelected: "year",
     isLoading: false,
     error: null,
 
     setYear: (year: number) => set({ year }),
-    setShowAllYears: (value: boolean) => set({ showAllYears: value }),
+    setMonth: (month: number) => set({ month }),
+    setTimeSelected: (timeSelected: Time) => set({ timeSelected }),
     fetchMomentsByYear: async (year: number): Promise<void> => {
       set({ isLoading: true, error: null });
       try {
-        const data = await getMovementsByYear.excecute(year);
-        set({ movementsByYear: data, isLoading: false, year });
+        const data = await getMovementsByYear.excecute([year]);
+        set({ movementsByYear: data[0], isLoading: false, year });
+      } catch (err: unknown) {
+        set({ error: (err as Error).message, isLoading: false });
+      }
+    },
+
+    fetchMomentsByMonth: async (year: number, month: number): Promise<void> => {
+      set({ isLoading: true, error: null });
+      try {
+        const data = await getMovementsByMonth.excecute(year, month);
+        set({ movementsByMonth: data, isLoading: false, year });
       } catch (err: unknown) {
         set({ error: (err as Error).message, isLoading: false });
       }
@@ -49,23 +55,10 @@ export const useMovementsStore = create<MovementsStore>((set, get) => {
     fetchAllYearsData: async (years: number[]) => {
       set({ isLoading: true, error: null });
       try {
-        const data = await Promise.all(
-          years.map((y) => getMovementsByYear.excecute(y))
-        );
-
-        const validData = data.map((d: MovementByYear | null | undefined) =>
-          !!d
-            ? d
-            : {
-                balance: 0,
-                totalIncome: 0,
-                totalOutcome: 0,
-                months: [{ income: 0, outcome: 0 }]
-              }
-        );
+        const data = await getMovementsByYear.excecute(years);
 
         set({
-          allYearsRaw: validData,
+          allYearsRaw: data,
           isLoading: false
         });
       } catch (err: unknown) {
