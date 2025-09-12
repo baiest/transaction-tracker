@@ -2,15 +2,15 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import Header from "./Header";
 
 const setYearMock = vi.fn();
-const setShowAllYearsMock = vi.fn();
+const setTimeSelectedMock = vi.fn();
 
 vi.mock("@/infrastructure/store/movements", () => {
   return {
     useMovementsStore: () => ({
       year: 2025,
-      showAllYears: false,
+      timeSelected: "year",
       setYear: setYearMock,
-      setShowAllYears: setShowAllYearsMock
+      setTimeSelected: setTimeSelectedMock
     })
   };
 });
@@ -18,11 +18,6 @@ vi.mock("@/infrastructure/store/movements", () => {
 describe("Header component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("renders title correctly", () => {
-    render(<Header />);
-    expect(screen.getByText("Transactions")).toBeInTheDocument();
   });
 
   it("renders selects and buttons", () => {
@@ -40,13 +35,17 @@ describe("Header component", () => {
     expect(setYearMock).toHaveBeenCalledWith(2023);
   });
 
-  it("calls setShowAllYears when the view mode changes", () => {
+  it("calls setTimeSelected when the view mode changes", () => {
     render(<Header />);
-    const select = screen.getByDisplayValue("Year");
-    fireEvent.change(select, { target: { value: "all-years" } });
-    expect(setShowAllYearsMock).toHaveBeenCalledWith(true);
 
-    fireEvent.change(select, { target: { value: "Year" } });
-    expect(setShowAllYearsMock).toHaveBeenCalledWith(false);
+    const selects = screen.getAllByRole("combobox");
+
+    const viewModeSelect = selects[0];
+
+    fireEvent.change(viewModeSelect, { target: { value: "all_years" } });
+    expect(setTimeSelectedMock).toHaveBeenCalledWith("all_years");
+
+    fireEvent.change(viewModeSelect, { target: { value: "year" } });
+    expect(setTimeSelectedMock).toHaveBeenCalledWith("year");
   });
 });

@@ -1,25 +1,26 @@
 "use client";
 
+import { Time } from "@/infrastructure/store/models";
 import { useMovementsStore } from "@/infrastructure/store/movements";
+import { MONTHS } from "@/utils/dates";
 
 export default function Header() {
-  const { year, showAllYears, setYear, setShowAllYears } = useMovementsStore();
+  const { year, month, timeSelected, setYear, setMonth, setTimeSelected } =
+    useMovementsStore();
   return (
     <>
-      <h2 className="text-2xl">Transactions</h2>
-
       <header className="flex justify-between items-center">
         <div className="flex gap-4">
           <select
             className="dark:bg-gray-800 px-3 py-1 rounded"
-            defaultValue="year"
-            onChange={(e) => setShowAllYears(e.target.value === "all-years")}
+            value={timeSelected}
+            onChange={(e) => setTimeSelected(e.target.value as Time)}
           >
-            <option value="all-years">All years</option>
+            <option value="all_years">All years</option>
             <option value="year">Year</option>
             <option value="month">Monthly</option>
           </select>
-          {!showAllYears && (
+          {(timeSelected === "year" || timeSelected === "month") && (
             <select
               className="dark:bg-gray-800 px-3 py-1 rounded"
               value={year}
@@ -32,6 +33,20 @@ export default function Header() {
               <option value="2021">2021</option>
               <option value="2021">2020</option>
               <option value="2021">2019</option>
+            </select>
+          )}
+
+          {timeSelected === "month" && (
+            <select
+              className="dark:bg-gray-800 px-3 py-1 rounded"
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+            >
+              {MONTHS.map((m, i) => (
+                <option key={m} value={i}>
+                  {m}
+                </option>
+              ))}
             </select>
           )}
         </div>
