@@ -34,12 +34,12 @@ export default function Sidebar({ className }: SidebarProps) {
           </li>
           <li>
             <a href="#" className={optionStyleWhenIsSelected(false)}>
-              Cuentas
+              Movimientos
             </a>
           </li>
           <li>
             <a href="#" className={optionStyleWhenIsSelected(false)}>
-              Movimientos
+              Cuentas
             </a>
           </li>
           <li>
