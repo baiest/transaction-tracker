@@ -1,3 +1,24 @@
+export interface Movement {
+  id: string;
+  email: string;
+  messageId: string;
+  date: Date;
+  value: number;
+  isNegative: boolean;
+  topic: strting;
+  detail: string;
+}
+
+export interface MovementResponse extends Omit<Movement, "date"> {
+  date: string;
+}
+
+export interface MovementsResponse {
+  totalPages: number;
+  page: number;
+  movements: MovementResponse[];
+}
+
 export interface MovementYear {
   income: number;
   outcome: number;
@@ -24,6 +45,7 @@ export interface MovementByMonth {
 }
 
 export interface IMovementsRepository {
+  getMovements: (page: number) => Promise<MovementsResponse>;
   getMovementsByYear: (year: number) => Promise<MovementByYear>;
   getMovementsByMonth: (
     year: number,
