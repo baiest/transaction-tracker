@@ -112,7 +112,7 @@ export default function Home() {
     chartData;
 
   return (
-    <>
+    <div className="grid md:grid-cols-3 grid-cols-1 justify-self-center  gap-8">
       <div className="dark:bg-gray-800 p-4 rounded">
         <h3 className="text-sm text-gray-400">Total Income</h3>
         <p className="text-2xl font-semibold text-green-400">
@@ -178,6 +178,6 @@ export default function Home() {
         />
         <div />
       </div>
-    </>
+    </div>
   );
 }
