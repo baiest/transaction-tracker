@@ -1,9 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import Home from "./page";
-import { vi } from "vitest";
 import { MovementByMonth, MovementByYear } from "@/core/entities/Movement";
 
-// Mock the entire module and directly expose the function
 vi.mock("@/infrastructure/store/movements", () => {
   const useMovementsStore = vi.fn();
   return { useMovementsStore };
@@ -15,7 +13,6 @@ vi.mock("@/ui/charts/LineChart", () => {
   };
 });
 
-// A helper function to easily mock the store's state for each test
 const mockUseMovementsStore = async (
   timeSelected: string,
   data: MovementByMonth | MovementByYear | undefined = {

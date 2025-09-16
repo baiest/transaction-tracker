@@ -2,7 +2,9 @@ import { render, screen } from "@testing-library/react";
 import ThemeProvider from "./ThemeProvider";
 
 vi.mock("next-themes", () => ({
-  ThemeProvider: ({ children }: any) => <div data-testid="mock">{children}</div>
+  ThemeProvider: ({ children }: unknonw) => (
+    <div data-testid="mock">{children}</div>
+  )
 }));
 
 describe("ThemeProvider", () => {

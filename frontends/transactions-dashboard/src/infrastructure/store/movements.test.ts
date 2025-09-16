@@ -1,6 +1,9 @@
 import { useMovementsStore } from "@/infrastructure/store/movements";
 import { GetMovementsByYear } from "@/core/usecases/getMovementsByYear";
-import { MovementByYear } from "@/core/entities/Movement";
+import type {
+  MovementByYear,
+  MovementsResponse
+} from "@/core/entities/Movement";
 import { GetMovementsByMonth } from "@/core/usecases/getMovementsByMonth";
 import { GetMovements } from "@/core/usecases/getMovements";
 
@@ -116,7 +119,7 @@ describe("useMovementsStore", () => {
     ];
     const getMovementsInstance = (GetMovements as ReturnType<typeof vi.fn>).mock
       .results[0].value;
-    (getMovementsInstance as any).totalPages = 5;
+    (getMovementsInstance as MovementsResponse).totalPages = 5;
 
     mockExecuteMovements.mockResolvedValueOnce(fakeData);
 

@@ -31,8 +31,13 @@ func (s *MovementsService) GetMovements(ctx context.Context, page int64) ([]*sch
 }
 
 func (s *MovementsService) GetMovementsByMonth(ctx context.Context, year int, month int) (*models.MovementByMonth, error) {
-	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
-	finishDate := time.Date(year, time.Month(month+1), 0, 23, 59, 59, 999999999, time.UTC)
+	loc, err := time.LoadLocation("America/Bogota")
+	if err != nil {
+		return nil, err
+	}
+
+	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, loc)
+	finishDate := time.Date(year, time.Month(month+1), 0, 23, 59, 59, 999999999, loc)
 
 	movements, err := s.repo.GetMovementsByDateRange(ctx, startDate, finishDate)
 	if err != nil {
@@ -43,11 +48,11 @@ func (s *MovementsService) GetMovementsByMonth(ctx context.Context, year int, mo
 	movementsByDay := make([]*models.MovementIncomeOutcomeByDay, 31)
 
 	for _, m := range movements {
-		m.Date = m.Date.In(time.Local)
+		m.Date = m.Date.In(loc)
 		day := m.Date.Day() - 1
 
 		if movementsByDay[day] == nil {
-			movementsByDay[day] = &models.MovementIncomeOutcomeByDay{Day: day + 1}
+			movementsByDay[day] = &models.MovementIncomeOutcomeByDay{Day: m.Date.Day() + 1}
 		}
 
 		if m.IsNegative {
