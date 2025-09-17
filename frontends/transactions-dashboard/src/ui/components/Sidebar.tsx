@@ -1,5 +1,9 @@
+"use client";
+
 import { cn } from "@/utils/styles";
+import { usePathname } from "next/navigation";
 import React from "react";
+import Link from "next/link";
 
 interface SidebarProps {
   className?: string;
@@ -11,9 +15,15 @@ const optionStyle =
 const optionSelectedStyle =
   "flex items-center p-3 rounded-md bg-indigo-100 text-indigo-600 font-medium hover:bg-indigo-200 dark:bg-indigo-900 dark:text-indigo-400 dark:hover:bg-indigo-800";
 
+const options = [
+  { href: "/", label: "Dashboard" },
+  { href: "/movements", label: "Movimientos" },
+  { href: "/accounts", label: "Cuentas" },
+  { href: "/goals", label: "Metas" },
+  { href: "/settings", label: "Ajustes" }
+];
 export default function Sidebar({ className }: SidebarProps) {
-  const optionStyleWhenIsSelected = (isSelected: boolean) =>
-    isSelected ? optionSelectedStyle : optionStyle;
+  const pathname = usePathname();
 
   return (
     <aside
@@ -27,31 +37,19 @@ export default function Sidebar({ className }: SidebarProps) {
           Finanzas
         </div>
         <ul className="space-y-2">
-          <li>
-            <a href="#" className={optionStyleWhenIsSelected(true)}>
-              Dashboard
-            </a>
-          </li>
-          <li>
-            <a href="#" className={optionStyleWhenIsSelected(false)}>
-              Cuentas
-            </a>
-          </li>
-          <li>
-            <a href="#" className={optionStyleWhenIsSelected(false)}>
-              Movimientos
-            </a>
-          </li>
-          <li>
-            <a href="#" className={optionStyleWhenIsSelected(false)}>
-              Metas
-            </a>
-          </li>
-          <li>
-            <a href="#" className={optionStyleWhenIsSelected(false)}>
-              Ajustes
-            </a>
-          </li>
+          {options.map(({ href, label }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                className={cn(
+                  optionStyle,
+                  pathname === href && optionSelectedStyle
+                )}
+              >
+                {label}
+              </Link>
+            </li>
+          ))}
         </ul>
       </nav>
     </aside>

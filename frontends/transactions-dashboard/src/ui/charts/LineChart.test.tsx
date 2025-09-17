@@ -70,7 +70,7 @@ describe("LineChart", () => {
     const chart = screen.getByTestId("mock-echarts-chart");
     const options = JSON.parse(chart.dataset.options as string);
     expect(options.legend.show).toBe(true);
-    expect(options.tooltip.trigger).toBe("item"); // Verifies override
+    expect(options.tooltip.trigger).toBe("item");
   });
 
   it("should use default height and minHeight if not provided", () => {

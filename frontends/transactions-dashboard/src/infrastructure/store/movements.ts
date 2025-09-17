@@ -3,13 +3,17 @@ import { GetMovementsByYear } from "@/core/usecases/getMovementsByYear";
 import { MovementsRepository } from "@/infrastructure/repositories/movements";
 import { create } from "zustand";
 import { MovementsStore, Time } from "./models";
+import { GetMovements } from "@/core/usecases/getMovements";
 
 export const useMovementsStore = create<MovementsStore>((set) => {
   const movementsRepository = new MovementsRepository();
   const getMovementsByYear = new GetMovementsByYear(movementsRepository);
   const getMovementsByMonth = new GetMovementsByMonth(movementsRepository);
+  const getMovements = new GetMovements(movementsRepository);
 
   return {
+    totalPages: 0,
+    movements: [],
     movementsByYear: {
       totalIncome: 0,
       totalOutcome: 0,
@@ -59,6 +63,21 @@ export const useMovementsStore = create<MovementsStore>((set) => {
 
         set({
           allYearsRaw: data,
+          isLoading: false
+        });
+      } catch (err: unknown) {
+        set({ error: (err as Error).message, isLoading: false });
+      }
+    },
+
+    fetchMovements: async (page: number) => {
+      set({ isLoading: true, error: null });
+      try {
+        const data = await getMovements.excecute(page);
+
+        set({
+          movements: data,
+          totalPages: getMovements.totalPages,
           isLoading: false
         });
       } catch (err: unknown) {
