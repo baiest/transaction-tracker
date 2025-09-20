@@ -12,10 +12,14 @@ import (
 	"transaction-tracker/internal/movements/domain"
 )
 
+var (
+	fixedTime = time.Date(2025, 9, 20, 12, 0, 0, 0, time.UTC)
+)
+
 // NewTestPostgresRepository is a constructor exclusively for tests.
 // It accepts the mock interface and returns the repository implementation.
 func NewTestPostgresRepository(db pgxmock.PgxPoolIface) MovementRepository {
-	return &postgresRepository{db: db}
+	return &postgresRepository{db: db, nowFunc: func() time.Time { return fixedTime }}
 }
 
 func setupMockDB(t *testing.T) (MovementRepository, pgxmock.PgxPoolIface, func()) {
@@ -36,6 +40,7 @@ func TestCreateMovement(t *testing.T) {
 	defer cleanup()
 
 	now := time.Now()
+
 	movement := &domain.Movement{
 		ID:            uuid.New().String(),
 		AccountID:     "acc1",
@@ -46,8 +51,8 @@ func TestCreateMovement(t *testing.T) {
 		Date:          now,
 		Source:        "card",
 		Category:      "groceries",
-		CreatedAt:     now,
-		UpdatedAt:     now,
+		CreatedAt:     fixedTime,
+		UpdatedAt:     fixedTime,
 	}
 
 	mock.ExpectExec(`INSERT INTO movements`).
@@ -67,6 +72,7 @@ func TestCreateMovement(t *testing.T) {
 
 	err := repo.CreateMovement(context.Background(), movement)
 	c.NoError(err)
+
 	c.NoError(mock.ExpectationsWereMet())
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -68,8 +67,6 @@ func TestGetMovements_Success(t *testing.T) {
 	var response *models.MovementsListResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	c.NoError(err)
-
-	fmt.Println(response)
 
 	c.Len(response.Movements, 1)
 	c.Equal(int64(1), response.Page)

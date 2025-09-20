@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"time"
 	"transaction-tracker/internal/movements/domain"
 
@@ -19,17 +18,20 @@ type DBQuerier interface {
 }
 
 type postgresRepository struct {
-	db DBQuerier
+	db      DBQuerier
+	nowFunc func() time.Time
 }
 
 func NewPostgresRepository(db *pgxpool.Pool) MovementRepository {
-	return &postgresRepository{db: db}
+	return &postgresRepository{db: db, nowFunc: time.Now}
 }
 
 // CreateMovement saves a movement using database/sql.
 func (r *postgresRepository) CreateMovement(ctx context.Context, movement *domain.Movement) error {
-	movement.CreatedAt = time.Now()
-	movement.UpdatedAt = time.Now()
+	now := r.nowFunc()
+
+	movement.CreatedAt = now
+	movement.UpdatedAt = now
 
 	query := `INSERT INTO movements (
 	id,
@@ -86,8 +88,6 @@ func (r *postgresRepository) GetTotalMovementsByAccountID(ctx context.Context, a
 
 // GetMovementsByAccountID gets a user's movements with pagination.
 func (r *postgresRepository) GetMovementsByAccountID(ctx context.Context, accountID string, limit int, offset int) ([]*domain.Movement, error) {
-	fmt.Printf("accountID=%v (type %T), limit=%v (type %T), offset=%v (type %T)\n", accountID, accountID, limit, limit, offset, offset)
-
 	query := `SELECT
 		id, account_id, institution_id, description, amount, type, date, source, category, created_at, updated_at
 	FROM movements

@@ -8,27 +8,27 @@ on:
     branches:
       - "**"
 
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version: 1.21
 
-      - name: Run Tests Dynamically
+      - name: Run Tests in Parallel
         run: |
-          # 1. Encontrar todos los directorios con archivos .go
-          #    Excluimos la carpeta 'vendor' y otras que no son de código
-          #    El comando "grep" y "sed" aseguran que solo obtengamos las rutas limpias
-          #    "xargs go test" ejecuta 'go test' para cada directorio encontrado
+          # 1. Find all directories containing .go files
+          #    Exclude 'vendor' and other irrelevant folders
+          #    The "grep" and "sed" commands ensure we only get clean paths
+          #    "go test" runs for each directory found
           find . -type d -not -path "./.git/*" -not -path "./vendor/*" | while read dir; do
             if ls "$dir"/*.go &> /dev/null; then
-              echo "Executing tests in: $dir"
-              go test -v -race -coverprofile=coverage.out "$dir"
+              echo "Running tests in: $dir"
+              go test -v -race -covermode=atomic -coverprofile=coverage.out $dir -parallel 4
             fi
           done
 
@@ -37,7 +37,7 @@ jobs:
           go tool cover -func=coverage.out
           coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/\%//')
           if (( $(echo "$coverage < 80" | bc -l) )); then
-            echo "La cobertura de pruebas es muy baja ($coverage%). Se requiere 80% o más."
+            echo "Test coverage is too low ($coverage%). Minimum required is 80%."
             exit 1
           fi
 
