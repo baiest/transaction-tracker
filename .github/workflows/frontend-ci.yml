@@ -53,7 +53,6 @@ jobs:
 
           echo "Done"
 
-
   frontend-tests:
     needs: discover-changed-frontends
     runs-on: ubuntu-latest
