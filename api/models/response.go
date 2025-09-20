@@ -27,6 +27,10 @@ func NewResponseOK(c *gin.Context, response Response) {
 	c.JSON(http.StatusOK, response.DataOrMessage())
 }
 
+func NewResponseCreated(c *gin.Context, response Response) {
+	c.JSON(http.StatusCreated, response.DataOrMessage())
+}
+
 func NewResponseInternalServerError(c *gin.Context) {
 	response := Response{Message: "something was wrong, please try again"}
 
