@@ -1,22 +1,23 @@
 package routes
 
 import (
+	"transaction-tracker/api/handler"
 	"transaction-tracker/api/models"
 	services "transaction-tracker/api/services/movements"
 )
 
-var (
-	movementsRoutes = []models.Route{
+func MovementsRoutes(h *handler.MovementHandler) []models.Route {
+	return []models.Route{
 		{
 			Endpoint:    "/movements",
 			Method:      models.GET,
-			HandlerFunc: services.GetMovements(),
+			HandlerFunc: h.GetMovements,
 			ApiVersion:  API_VERSION,
 		},
 		{
 			Endpoint:    "/movements",
 			Method:      models.POST,
-			HandlerFunc: services.CreateMovement(),
+			HandlerFunc: h.CreateMovement,
 			ApiVersion:  API_VERSION,
 		},
 		{
@@ -38,4 +39,4 @@ var (
 			ApiVersion:  API_VERSION,
 		},
 	}
-)
+}
