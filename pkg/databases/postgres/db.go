@@ -7,12 +7,36 @@ import (
 	"os"
 	"transaction-tracker/pkg/databases"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // client is the concrete implementation of our PostgreSQL client.
 type client struct {
 	pool *pgxpool.Pool
+}
+
+type queryTracer struct{}
+
+func (qt *queryTracer) TraceQueryStart(
+	ctx context.Context,
+	conn *pgx.Conn,
+	data pgx.TraceQueryStartData,
+) context.Context {
+	fmt.Printf("[QUERY START] %s | args=%v\n", data.SQL, data.Args)
+	return ctx
+}
+
+func (qt *queryTracer) TraceQueryEnd(
+	ctx context.Context,
+	conn *pgx.Conn,
+	data pgx.TraceQueryEndData,
+) {
+	if data.Err != nil {
+		fmt.Printf("[QUERY END] ERROR: %v\n", data.Err)
+	} else {
+		fmt.Printf("[QUERY END] commandTag=%v\n", data.CommandTag.String())
+	}
 }
 
 var (
@@ -27,7 +51,15 @@ func NewClient(ctx context.Context) (databases.Client, error) {
 		return nil, errEnvNotSet
 	}
 
-	pool, err := pgxpool.New(ctx, connStr)
+	config, err := pgxpool.ParseConfig(connStr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Activar logs
+	config.ConnConfig.Tracer = &queryTracer{}
+
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create connection pool: %w", err)
 	}

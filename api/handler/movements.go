@@ -21,8 +21,8 @@ func NewMovementHandler(ucm usecase.MovementUsecase) *MovementHandler {
 	}
 }
 
-// GetMovements handles the GET /movements request.
-func (h *MovementHandler) GetMovements(c *gin.Context) {
+// GetMovementByID handles the GET /movements request.
+func (h *MovementHandler) GetMovementByID(c *gin.Context) {
 	log, account, err := getContextDependencies(c)
 	if err != nil {
 		return
