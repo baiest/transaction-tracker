@@ -21,8 +21,8 @@ func NewMovementHandler(ucm usecase.MovementUsecase) *MovementHandler {
 	}
 }
 
-// GetMovementByID handles the GET /movements request.
-func (h *MovementHandler) GetMovementByID(c *gin.Context) {
+// GetMovements handles the GET /movements request.
+func (h *MovementHandler) GetMovements(c *gin.Context) {
 	log, account, err := getContextDependencies(c)
 	if err != nil {
 		return
@@ -34,10 +34,10 @@ func (h *MovementHandler) GetMovementByID(c *gin.Context) {
 		page = 1
 	}
 
-	limitStr := c.DefaultQuery("limit", "1")
+	limitStr := c.DefaultQuery("limit", "10")
 	limit, err := strconv.ParseInt(limitStr, 10, 64)
 	if err != nil {
-		limit = 1
+		limit = 10
 	}
 
 	movements, err := h.movementsUsecase.GetPaginatedMovementsByAccountID(c.Request.Context(), account.ID, int(limit), int(page))
@@ -57,6 +57,35 @@ func (h *MovementHandler) GetMovementByID(c *gin.Context) {
 			Page:       int64(movements.CurrentPage),
 			Movements:  models.ToMovementResponses(movements.Movements),
 		},
+	})
+}
+
+// GetMovementByID handles the GET /movements request.
+func (h *MovementHandler) GetMovementByID(c *gin.Context) {
+	log, account, err := getContextDependencies(c)
+	if err != nil {
+		return
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		models.NewResponseInvalidRequest(c, models.Response{Message: "movement id is required"})
+		return
+	}
+
+	movement, err := h.movementsUsecase.GetMovementByID(c.Request.Context(), id, account.ID)
+	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "get_movements_failed",
+			Error: err,
+		})
+
+		models.NewResponseInternalServerError(c)
+		return
+	}
+
+	models.NewResponseOK(c, models.Response{
+		Data: models.ToMovementResponse(movement),
 	})
 }
 

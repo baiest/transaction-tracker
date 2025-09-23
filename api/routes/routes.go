@@ -12,6 +12,7 @@ const (
 // Routes holds all the application handlers.
 type RouteHandler struct {
 	MovementHandler *handler.MovementHandler
+	MessageHandler  *handler.MessageHandler
 }
 
 func (r *RouteHandler) Routes() []models.Route {
@@ -20,6 +21,7 @@ func (r *RouteHandler) Routes() []models.Route {
 	routes = append(routes, googleRoutes...)
 	routes = append(routes, gmailRoutes...)
 	routes = append(routes, MovementsRoutes(r.MovementHandler)...)
+	routes = append(routes, MessagesRoutes(r.MessageHandler)...)
 
 	return routes
 }

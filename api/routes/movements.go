@@ -15,6 +15,12 @@ func MovementsRoutes(h *handler.MovementHandler) []models.Route {
 			ApiVersion:  API_VERSION,
 		},
 		{
+			Endpoint:    "/movements/:id",
+			Method:      models.GET,
+			HandlerFunc: h.GetMovementByID,
+			ApiVersion:  API_VERSION,
+		},
+		{
 			Endpoint:    "/movements",
 			Method:      models.POST,
 			HandlerFunc: h.CreateMovement,

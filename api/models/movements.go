@@ -15,15 +15,17 @@ type CreateMovementRequest struct {
 }
 
 type MovementResponse struct {
-	ID            string    `json:"id"`
-	AccountID     string    `json:"accountId"`
-	InstitutionID string    `json:"institutionId,omitempty"`
-	Description   string    `json:"description,omitempty"`
-	Amount        float64   `json:"amount"`
-	Type          string    `json:"type"`
-	Date          time.Time `json:"date"`
-	Source        string    `json:"source,omitempty"`
-	Category      string    `json:"category,omitempty"`
+	ID             string    `json:"id"`
+	AccountID      string    `json:"accountId"`
+	InstitutionID  string    `json:"institutionId,omitempty"`
+	MessageID      string    `json:"message_id,omitempty"`
+	NotificationID string    `json:"notification_id,omitempty"`
+	Description    string    `json:"description,omitempty"`
+	Amount         float64   `json:"amount"`
+	Type           string    `json:"type"`
+	Date           time.Time `json:"date"`
+	Source         string    `json:"source,omitempty"`
+	Category       string    `json:"category,omitempty"`
 }
 
 type MovementsListResponse struct {
@@ -55,4 +57,45 @@ type MovementIncomeOutcome struct {
 type MovementIncomeOutcomeByDay struct {
 	Day int `json:"day"`
 	MovementIncomeOutcome
+}
+
+func ToDomainMovement(req CreateMovementRequest) *domain.Movement {
+	return &domain.Movement{
+		AccountID:     req.AccountID,
+		InstitutionID: req.InstitutionID,
+		Type:          req.Type,
+		Amount:        req.Amount,
+		Date:          req.Date,
+		Description:   req.Description,
+	}
+}
+
+// ToMovementResponse converts a single domain.Movement to an API MovementResponse.
+func ToMovementResponse(m *domain.Movement) *MovementResponse {
+	return &MovementResponse{
+		ID:             m.ID,
+		AccountID:      m.AccountID,
+		InstitutionID:  m.InstitutionID,
+		MessageID:      m.MessageID,
+		NotificationID: m.NotificationID,
+		Description:    m.Description,
+		Amount:         m.Amount,
+		Type:           string(m.Type),
+		Date:           m.Date,
+		Source:         string(m.Source),
+		Category:       string(m.Category),
+	}
+}
+
+// ToMovementResponses converts a slice of domain.Movement to a slice of API MovementResponse.
+func ToMovementResponses(movements []*domain.Movement) []*MovementResponse {
+	if movements == nil {
+		return []*MovementResponse{}
+	}
+
+	response := make([]*MovementResponse, len(movements))
+	for i, m := range movements {
+		response[i] = ToMovementResponse(m)
+	}
+	return response
 }

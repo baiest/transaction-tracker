@@ -4,40 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"transaction-tracker/api/models"
-	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/internal/movements/domain"
 	"transaction-tracker/internal/movements/usecase"
-	"transaction-tracker/logger"
 
-	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
-
-func setupTestContext(method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
-	gin.SetMode(gin.TestMode)
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	req, err := http.NewRequest(method, target, body)
-	if err != nil {
-	}
-	c.Request = req
-
-	mockLogger, _ := logger.GetLogger(c, "test")
-	c.Set("logger", mockLogger)
-
-	c.Set("account", &accounts.Account{ID: "accountID"})
-
-	return c, w
-}
 
 func TestGetMovements_Success(t *testing.T) {
 	c := require.New(t)
@@ -56,6 +33,7 @@ func TestGetMovements_Success(t *testing.T) {
 			return &domain.PaginatedMovements{Movements: movementsMock, CurrentPage: 1}, nil
 		},
 	}
+
 	testHandler := NewMovementHandler(mockUsecase)
 
 	ginContext, w := setupTestContext(http.MethodGet, "/movements?page=2&limit=5", nil)
