@@ -9,7 +9,7 @@ import (
 type MockMovementUsecase struct {
 	CreateMovementFunc                   func(ctx context.Context, movement *domain.Movement) error
 	GetPaginatedMovementsByAccountIDFunc func(ctx context.Context, accountID string, limit int, offset int) (*domain.PaginatedMovements, error)
-	GetMovementByIDFunc                  func(ctx context.Context, id string) (*domain.Movement, error)
+	GetMovementByIDFunc                  func(ctx context.Context, id string, accountID string) (*domain.Movement, error)
 }
 
 // CreateMovement calls the mocked CreateMovementFunc.
@@ -23,6 +23,6 @@ func (m *MockMovementUsecase) GetPaginatedMovementsByAccountID(ctx context.Conte
 }
 
 // GetMovementByID calls the mocked GetMovementByIDFunc.
-func (m *MockMovementUsecase) GetMovementByID(ctx context.Context, id string) (*domain.Movement, error) {
-	return m.GetMovementByIDFunc(ctx, id)
+func (m *MockMovementUsecase) GetMovementByID(ctx context.Context, id string, accountID string) (*domain.Movement, error) {
+	return m.GetMovementByIDFunc(ctx, id, accountID)
 }

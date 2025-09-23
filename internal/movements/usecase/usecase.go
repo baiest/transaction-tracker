@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 	"transaction-tracker/internal/movements/domain"
 	"transaction-tracker/internal/movements/repository"
@@ -51,18 +52,24 @@ func (u *movementUsecase) CreateMovement(ctx context.Context, movement *domain.M
 }
 
 // GetMovementByID is a sample method to get a movement.
-func (u *movementUsecase) GetMovementByID(ctx context.Context, id string) (*domain.Movement, error) {
-	return u.movementRepo.GetMovementByID(ctx, id)
+func (u *movementUsecase) GetMovementByID(ctx context.Context, id string, accountID string) (*domain.Movement, error) {
+	return u.movementRepo.GetMovementByID(ctx, id, accountID)
 }
 
 // GetMovementsByUserID is a sample method to get a user's movements.
 func (u *movementUsecase) GetPaginatedMovementsByAccountID(ctx context.Context, accountID string, limit int, offset int) (*domain.PaginatedMovements, error) {
+	fmt.Println(limit, offset)
 	if limit <= 0 {
-		limit = 1
+		limit = 10
 	}
 
 	if limit > 20 {
 		limit = 20
+	}
+
+	offset -= 1
+	if offset < 0 {
+		offset = 0
 	}
 
 	totalRecords, err := u.movementRepo.GetTotalMovementsByAccountID(ctx, accountID)

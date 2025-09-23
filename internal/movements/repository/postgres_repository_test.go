@@ -42,17 +42,19 @@ func TestCreateMovement(t *testing.T) {
 	now := time.Now()
 
 	movement := &domain.Movement{
-		ID:            uuid.New().String(),
-		AccountID:     "acc1",
-		InstitutionID: "inst1",
-		Description:   "Test Description",
-		Amount:        1000.0,
-		Type:          "expense",
-		Date:          now,
-		Source:        "card",
-		Category:      "groceries",
-		CreatedAt:     fixedTime,
-		UpdatedAt:     fixedTime,
+		ID:             uuid.New().String(),
+		AccountID:      "acc1",
+		InstitutionID:  "inst1",
+		MessageID:      "mid1",
+		NotificationID: "nid1",
+		Description:    "Test Description",
+		Amount:         1000.0,
+		Type:           "expense",
+		Date:           now,
+		Source:         "card",
+		Category:       "groceries",
+		CreatedAt:      fixedTime,
+		UpdatedAt:      fixedTime,
 	}
 
 	mock.ExpectExec(`INSERT INTO movements`).
@@ -60,6 +62,8 @@ func TestCreateMovement(t *testing.T) {
 			movement.ID,
 			movement.AccountID,
 			movement.InstitutionID,
+			movement.MessageID,
+			movement.NotificationID,
 			movement.Description,
 			movement.Amount,
 			movement.Type,
@@ -84,21 +88,23 @@ func TestGetMovementByID(t *testing.T) {
 
 	now := time.Now()
 	instID := "inst1"
+	messaID := "mid1"
+	notiID := "nid1"
 	desc := "Test Desc"
 	amount := float64(1000.0)
 	date := now
 	source := "card"
 	cat := "groceries"
 
-	columns := []string{"id", "account_id", "institution_id", "description", "amount", "type", "date", "source", "category", "created_at", "updated_at"}
+	columns := []string{"id", "account_id", "institution_id", "message_id", "notification_id", "description", "amount", "type", "date", "source", "category", "created_at", "updated_at"}
 	rows := pgxmock.NewRows(columns).
-		AddRow("mov1", "acc1", &instID, &desc, amount, "expense", &date, &source, &cat, &now, &now)
+		AddRow("mov1", "acc1", &instID, &notiID, &messaID, &desc, amount, "expense", &date, &source, cat, &now, &now)
 
-	mock.ExpectQuery(`SELECT (.+) FROM movements WHERE id = \$1`).
-		WithArgs("mov1").
+	mock.ExpectQuery(`SELECT (.+) FROM movements WHERE id = \$1 AND account_id = \$2`).
+		WithArgs("mov1", "acc1").
 		WillReturnRows(rows)
 
-	m, err := repo.GetMovementByID(context.Background(), "mov1")
+	m, err := repo.GetMovementByID(context.Background(), "mov1", "acc1")
 	c.NoError(err)
 	c.Equal("mov1", m.ID)
 	c.Equal("acc1", m.AccountID)
@@ -116,22 +122,26 @@ func TestGetMovementsByAccountID(t *testing.T) {
 
 	instID1 := "inst1"
 	desc1 := "Desc 1"
+	messaID1 := "mid1"
+	notiID1 := "nid1"
 	amount1 := 1000.0
 	date1 := now
 	source1 := "card"
 	cat1 := "groceries"
 
 	instID2 := "inst1"
+	messaID2 := "mid2"
+	notiID2 := "nid2"
 	desc2 := "Desc 2"
 	amount2 := 2000.0
 	date2 := now.Add(time.Hour)
 	source2 := "transfer"
 	cat2 := "salary"
 
-	columns := []string{"id", "account_id", "institution_id", "description", "amount", "type", "date", "source", "category", "created_at", "updated_at"}
+	columns := []string{"id", "account_id", "institution_id", "message_id", "notification_id", "description", "amount", "type", "date", "source", "category", "created_at", "updated_at"}
 	rows := pgxmock.NewRows(columns).
-		AddRow("mov1", "acc1", &instID1, &desc1, amount1, "expense", &date1, &source1, &cat1, &now, &now).
-		AddRow("mov2", "acc1", &instID2, &desc2, amount2, "income", &date2, &source2, &cat2, &now, &now)
+		AddRow("mov1", "acc1", &instID1, &notiID1, &messaID1, &desc1, amount1, "expense", &date1, &source1, cat1, &now, &now).
+		AddRow("mov2", "acc1", &instID2, &notiID2, &messaID2, &desc2, amount2, "income", &date2, &source2, cat2, &now, &now)
 
 	mock.ExpectQuery(`SELECT (.+) FROM movements WHERE account_id = \$1.*LIMIT \$2 OFFSET \$3`).
 		WithArgs("acc1", 10, 1).

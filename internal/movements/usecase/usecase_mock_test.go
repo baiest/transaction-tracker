@@ -89,26 +89,27 @@ func TestMockMovementUsecase_GetMovementByID(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		mockUC := &MockMovementUsecase{
-			GetMovementByIDFunc: func(cx context.Context, id string) (*domain.Movement, error) {
+			GetMovementByIDFunc: func(cx context.Context, id string, accountID string) (*domain.Movement, error) {
 				c.Equal(ctx, cx)
 				c.Equal("mov1", id)
+				c.Equal("acc1", accountID)
 				return movement, nil
 			},
 		}
 
-		result, err := mockUC.GetMovementByID(ctx, "mov1")
+		result, err := mockUC.GetMovementByID(ctx, "mov1", "acc1")
 		assert.NoError(t, err)
 		c.Equal(movement, result)
 	})
 
 	t.Run("error", func(t *testing.T) {
 		mockUC := &MockMovementUsecase{
-			GetMovementByIDFunc: func(c context.Context, id string) (*domain.Movement, error) {
+			GetMovementByIDFunc: func(c context.Context, id string, accountID string) (*domain.Movement, error) {
 				return nil, errors.New("not found")
 			},
 		}
 
-		result, err := mockUC.GetMovementByID(ctx, "mov1")
+		result, err := mockUC.GetMovementByID(ctx, "mov1", "acc1")
 		assert.Nil(t, result)
 		assert.EqualError(t, err, "not found")
 	})
