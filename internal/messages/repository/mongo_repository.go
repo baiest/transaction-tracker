@@ -7,16 +7,10 @@ import (
 	"transaction-tracker/internal/messages/domain"
 
 	"transaction-tracker/pkg/databases"
-	databaseMongo "transaction-tracker/pkg/databases/mongo"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-)
-
-const (
-	messagesDatabase   databaseMongo.DatabaseName   = databaseMongo.TRANSACTIONS
-	messagesCollection databaseMongo.CollectionName = databaseMongo.MESSAGES
 )
 
 var (
@@ -29,18 +23,8 @@ type messageRepository struct {
 	nowFunc    func() time.Time
 }
 
-func NewMessageRepository(ctx context.Context) (MessageRepository, error) {
-	client, err := databaseMongo.NewClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	collection, err := client.Collection(messagesDatabase, messagesCollection)
-	if err != nil {
-		return nil, err
-	}
-
-	return &messageRepository{collection: collection, nowFunc: time.Now}, nil
+func NewMessageRepository(ctx context.Context, collection databases.CollectionAPI) MessageRepository {
+	return &messageRepository{collection: collection, nowFunc: time.Now}
 }
 
 // SaveMessage inserts a new Message. If the ID already exists, returns ErrMessageAlreadyExists.
