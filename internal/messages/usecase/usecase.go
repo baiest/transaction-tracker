@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"net/mail"
 	"strings"
 	"time"
@@ -230,8 +229,6 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, message *d
 		})
 
 		message.Status = domain.Failure
-
-		fmt.Println("fallo extrayendo")
 
 		return u.updateMessage(ctx, message, err)
 	}

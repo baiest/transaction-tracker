@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"time"
 	"transaction-tracker/internal/messages/domain"
 )
@@ -24,12 +23,11 @@ type MessageRequest struct {
 
 // ToMovementResponse converts a single domain.Movement to an API MovementResponse.
 func ToMessageResponse(m *domain.Message) *MessageResponse {
-	fmt.Println(m)
 	return &MessageResponse{
 		ID:             m.ID,
 		AccountID:      m.AccountID,
 		ExternalID:     m.ExternalID,
-		NotificationID: *m.NotificationID,
+		NotificationID: m.NotificationID,
 		ExtractID:      "",
 		From:           m.From,
 		To:             m.To,

@@ -33,9 +33,9 @@ func TestNewMessage(t *testing.T) {
 	c.Equal(to, msg.To)
 	c.Equal(Pending, msg.Status)
 
-	c.Equal(&externalID, msg.ExternalID)
-	c.Equal(&notificationID, msg.NotificationID)
-	c.Equal(&extractID, msg.ExtractID)
+	c.Equal(externalID, msg.ExternalID)
+	c.Equal(notificationID, msg.NotificationID)
+	c.Equal(extractID, msg.ExtractID)
 
 	c.WithinDuration(now, msg.Date, time.Second)
 }

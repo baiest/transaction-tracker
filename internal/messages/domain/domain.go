@@ -21,8 +21,8 @@ type Message struct {
 	ID             string        `bson:"_id" json:"id"`
 	AccountID      string        `bson:"account_id" json:"account_id"`
 	ExternalID     string        `bson:"external_id" json:"external_id"`
-	NotificationID *string       `bson:"notification_id,omitempty" json:"notification_id,omitempty"`
-	ExtractID      *string       `bson:"extract_id,omitempty" json:"extract_id,omitempty"`
+	NotificationID string        `bson:"notification_id,omitempty" json:"notification_id,omitempty"`
+	ExtractID      string        `bson:"extract_id,omitempty" json:"extract_id,omitempty"`
 	From           string        `bson:"from,omitempty" json:"from,omitempty"`
 	To             string        `bson:"to,omitempty" json:"to,omitempty"`
 	Status         MessageStatus `bson:"status" json:"status"`
@@ -38,8 +38,8 @@ func NewMessage(accountID, from string, to string, externalID string, notificati
 		ID:             _message_prefix + strings.ReplaceAll(uuid.New().String(), "-", ""),
 		AccountID:      accountID,
 		ExternalID:     externalID,
-		NotificationID: &notificationID,
-		ExtractID:      &extractID,
+		NotificationID: notificationID,
+		ExtractID:      extractID,
 		From:           from,
 		To:             to,
 		Status:         Pending,

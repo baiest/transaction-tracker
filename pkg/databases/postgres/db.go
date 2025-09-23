@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"transaction-tracker/logger"
 	"transaction-tracker/pkg/databases"
+
+	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,14 +19,15 @@ type client struct {
 	pool *pgxpool.Pool
 }
 
-type queryTracer struct{}
+type queryTracer struct {
+	log *loggerModels.Logger
+}
 
 func (qt *queryTracer) TraceQueryStart(
 	ctx context.Context,
 	conn *pgx.Conn,
 	data pgx.TraceQueryStartData,
 ) context.Context {
-	fmt.Printf("[QUERY START] %s | args=%v\n", data.SQL, data.Args)
 	return ctx
 }
 
@@ -33,9 +37,15 @@ func (qt *queryTracer) TraceQueryEnd(
 	data pgx.TraceQueryEndData,
 ) {
 	if data.Err != nil {
-		fmt.Printf("[QUERY END] ERROR: %v\n", data.Err)
-	} else {
-		fmt.Printf("[QUERY END] commandTag=%v\n", data.CommandTag.String())
+		qt.log.Error(loggerModels.LogProperties{
+			Event: "postgres_query_failed",
+			Error: data.Err,
+			AdditionalParams: []loggerModels.Properties{
+				logger.MapToProperties(map[string]string{
+					"query": data.CommandTag.String(),
+				}),
+			},
+		})
 	}
 }
 
@@ -46,6 +56,11 @@ var (
 // NewClient creates a new instance of the database client
 // with a connection pool.
 func NewClient(ctx context.Context) (databases.Client, error) {
+	l, err := logger.GetLogger(ctx, "postgres")
+	if err != nil {
+		return nil, err
+	}
+
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
 		return nil, errEnvNotSet
@@ -57,7 +72,7 @@ func NewClient(ctx context.Context) (databases.Client, error) {
 	}
 
 	// Activar logs
-	config.ConnConfig.Tracer = &queryTracer{}
+	config.ConnConfig.Tracer = &queryTracer{log: l}
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
