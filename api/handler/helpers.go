@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"transaction-tracker/api/services/accounts"
+	"transaction-tracker/internal/accounts/domain"
 	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +15,7 @@ var (
 )
 
 // getContextDependencies extrae el logger y el accountID del contexto de Gin.
-func getContextDependencies(c *gin.Context) (*loggerModels.Logger, *accounts.Account, error) {
+func getContextDependencies(c *gin.Context) (*loggerModels.Logger, *domain.Account, error) {
 	l, ok := c.Get("logger")
 	if !ok {
 		return nil, nil, errors.New("logger not found in context")
@@ -34,7 +34,7 @@ func getContextDependencies(c *gin.Context) (*loggerModels.Logger, *accounts.Acc
 		return nil, nil, errMissingAccountID
 	}
 
-	account := acc.(*accounts.Account)
+	account := acc.(*domain.Account)
 
 	return log, account, nil
 }
