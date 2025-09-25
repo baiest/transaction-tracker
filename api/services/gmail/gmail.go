@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"transaction-tracker/api/services/gmail/models"
-	"transaction-tracker/api/services/gmail/transformers"
 	"transaction-tracker/api/services/movements"
 	"transaction-tracker/database/mongo/schemas"
 	"transaction-tracker/googleapi"
@@ -96,7 +95,7 @@ func (g *GmailService) filterAndCreateMovement(ctx context.Context, message *sch
 		return nil, errUpdate
 	}
 
-	msg, err := g.service.GetMessageByID(ctx, message.ID)
+	_, err := g.service.GetMessageByID(ctx, message.ID)
 	if err != nil && strings.Contains(err.Error(), "not found") {
 		message.Status = "success"
 
@@ -119,89 +118,90 @@ func (g *GmailService) filterAndCreateMovement(ctx context.Context, message *sch
 		return nil, err
 	}
 
-	messageType, isSupported := isMessageFiltered(msg)
+	// messageType, isSupported := isMessageFiltered(msg)
 
-	if !isSupported {
-		message.Status = "success"
+	// if !isSupported {
+	// 	message.Status = "success"
 
-		err = g.service.UpdateMessage(ctx, message)
-		if err != nil {
-			return nil, err
-		}
+	// 	err = g.service.UpdateMessage(ctx, message)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		return message, nil
-	}
+	// 	return message, nil
+	// }
 
-	transformer, err := transformers.NewMovementTransformer("davivienda", msg, messageType)
-	if err != nil {
-		message.Status = "failure"
+	// transformer, err := transformers.NewMovementTransformer("davivienda", msg, messageType)
+	// if err != nil {
+	// 	message.Status = "failure"
 
-		errUpdate := g.service.UpdateMessage(ctx, message)
-		if errUpdate != nil {
-			return nil, errUpdate
-		}
+	// 	errUpdate := g.service.UpdateMessage(ctx, message)
+	// 	if errUpdate != nil {
+	// 		return nil, errUpdate
+	// 	}
 
-		return nil, err
-	}
+	// 	return nil, err
+	// }
 
-	if messageType == models.Extract {
-		extract, err := g.service.DownloadAttachments(ctx, msg.Id)
-		if err != nil {
-			return nil, err
-		}
+	// if messageType == models.Extract {
+	// 	extract, err := g.service.DownloadAttachments(ctx, msg.Id)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		transformer.SetExtract(extract)
-	}
+	// 	transformer.SetExtract(extract)
+	// }
 
-	movements, err := transformer.Excecute()
-	if err != nil {
-		message.Status = "failure"
+	// movements, err := transformer.Excecute()
+	// if err != nil {
+	// 	message.Status = "failure"
 
-		errUpdate := g.service.UpdateMessage(ctx, message)
-		if errUpdate != nil {
-			return nil, errUpdate
-		}
+	// 	errUpdate := g.service.UpdateMessage(ctx, message)
+	// 	if errUpdate != nil {
+	// 		return nil, errUpdate
+	// 	}
 
-		return nil, err
-	}
+	// 	return nil, err
+	// }
 
-	movementsChan := make(chan bool, len(movements))
+	// movementsChan := make(chan bool, len(movements))
 
-	for _, m := range movements {
-		go func() {
-			defer func() {
-				movementsChan <- true
-			}()
+	// for _, m := range movements {
+	// 	go func() {
+	// 		defer func() {
+	// 			movementsChan <- true
+	// 		}()
 
-			m.MessageID = message.ID
-			m.Email = g.service.Email()
+	// 		m.MessageID = message.ID
+	// 		m.Email = g.service.Email()
 
-			err = g.movementService.CreateMovement(ctx, m)
-			if err != nil {
-				message.Status = "failure"
+	// 		err = g.movementService.CreateMovement(ctx, m)
+	// 		if err != nil {
+	// 			message.Status = "failure"
 
-				g.service.UpdateMessage(ctx, message)
-			}
-		}()
-	}
+	// 			g.service.UpdateMessage(ctx, message)
+	// 		}
+	// 	}()
+	// }
 
-	for range movements {
-		<-movementsChan
-	}
+	// for range movements {
+	// 	<-movementsChan
+	// }
 
-	close(movementsChan)
+	// close(movementsChan)
 
-	if message.Status != "pending" {
-		return message, nil
-	}
+	// if message.Status != "pending" {
+	// 	return message, nil
+	// }
 
-	message.Status = "success"
+	// message.Status = "success"
 
-	err = g.service.UpdateMessage(ctx, message)
-	if err != nil {
-		return nil, err
-	}
+	// err = g.service.UpdateMessage(ctx, message)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
+	// return message, nil
 	return message, nil
 }
 
