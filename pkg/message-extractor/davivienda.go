@@ -9,8 +9,8 @@ import (
 	"time"
 	"transaction-tracker/api/services/gmail/models"
 	"transaction-tracker/database/mongo/schemas"
-	documentextractor "transaction-tracker/document-extractor"
 	"transaction-tracker/internal/movements/domain"
+	documentextractor "transaction-tracker/pkg/document-extractor"
 )
 
 type davivienda struct {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/database/mongo/schemas"
 	"transaction-tracker/googleapi/repositories"
 
@@ -28,7 +27,7 @@ type GoogleClient struct {
 	repository   *repositories.GoogleAccountsRepository
 }
 
-func NewGoogleClient(ctx context.Context, account *accounts.Account) (*GoogleClient, error) {
+func NewGoogleClient(ctx context.Context) (*GoogleClient, error) {
 	if clientID == "" || clientSecret == "" {
 		return nil, fmt.Errorf("GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET must be configurated")
 	}
@@ -37,8 +36,6 @@ func NewGoogleClient(ctx context.Context, account *accounts.Account) (*GoogleCli
 	if err != nil {
 		return nil, err
 	}
-
-	email := account.Email
 
 	config := &oauth2.Config{
 		ClientID:     clientID,
@@ -51,7 +48,7 @@ func NewGoogleClient(ctx context.Context, account *accounts.Account) (*GoogleCli
 		Endpoint: google.Endpoint,
 	}
 
-	return &GoogleClient{Config: config, repository: repository, email: email}, nil
+	return &GoogleClient{Config: config, repository: repository, email: ""}, nil
 }
 
 func (g *GoogleClient) SaveTokenAndInitServices(ctx context.Context, code string) error {
@@ -79,7 +76,7 @@ func (g *GoogleClient) SaveTokenAndInitServices(ctx context.Context, code string
 		return err
 	}
 
-	service, err := NewGmailService(ctx, g)
+	service, err := NewGmailClient(ctx, g)
 	if err != nil {
 		return fmt.Errorf("Error creating gmail service: %v", err)
 	}
@@ -122,7 +119,7 @@ func (g *GoogleClient) GmailService(ctx context.Context) (*GmailService, error) 
 
 		g.token = account.Token
 
-		service, err := NewGmailService(ctx, g)
+		service, err := NewGmailClient(ctx, g)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating gmail service: %v", err)
 		}

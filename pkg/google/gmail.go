@@ -43,7 +43,7 @@ type GmailService struct {
 	gmailExtractsRepository *repositories.GmailExtractsRepository
 }
 
-func NewGmailService(ctx context.Context, gClient *GoogleClient) (*GmailService, error) {
+func NewGmailClient(ctx context.Context, gClient *GoogleClient) (*GmailService, error) {
 	client := gClient.Config.Client(ctx, gClient.token)
 
 	service, err := gmail.NewService(ctx, option.WithHTTPClient(client))
