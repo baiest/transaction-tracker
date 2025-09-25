@@ -23,7 +23,7 @@ type messageRepository struct {
 	nowFunc    func() time.Time
 }
 
-func NewMessageRepository(ctx context.Context, collection databases.CollectionAPI) MessageRepository {
+func NewMessageRepository(collection databases.CollectionAPI) MessageRepository {
 	return &messageRepository{collection: collection, nowFunc: time.Now}
 }
 

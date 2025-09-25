@@ -7,8 +7,8 @@ import (
 	"net/mail"
 	"strings"
 	"time"
-	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/api/services/gmail/models"
+	accountsDomain "transaction-tracker/internal/accounts/domain"
 	"transaction-tracker/internal/messages/domain"
 	"transaction-tracker/internal/messages/repository"
 	movementRepository "transaction-tracker/internal/movements/repository"
@@ -46,15 +46,17 @@ type messageUsecase struct {
 	messageRepo  repository.MessageRepository
 	movementRepo movementRepository.MovementRepository
 	gmailService *google.GmailService
+	googleClient *google.GoogleClient
 	log          *loggerModels.Logger
 }
 
 // NewMessageUsecase is the constructor for the use case implementation.
 // It receives a repository interface as a dependency.
-func NewMessageUsecase(ctx context.Context, log *loggerModels.Logger, repo repository.MessageRepository, movementsRepo movementRepository.MovementRepository) MessageUsecase {
+func NewMessageUsecase(ctx context.Context, log *loggerModels.Logger, googleClient *google.GoogleClient, repo repository.MessageRepository, movementsRepo movementRepository.MovementRepository) MessageUsecase {
 	return &messageUsecase{
 		messageRepo:  repo,
 		movementRepo: movementsRepo,
+		googleClient: googleClient,
 		log:          log,
 	}
 }
@@ -63,22 +65,17 @@ func (u *messageUsecase) GetMessageByIDAndAccountID(ctx context.Context, id stri
 	return u.messageRepo.GetMessageByID(ctx, id, accountID)
 }
 
-func (u *messageUsecase) Process(ctx context.Context, notificationID string, externalID string, account *accounts.Account) (*domain.Message, error) {
+func (u *messageUsecase) Process(ctx context.Context, notificationID string, externalID string, account *accountsDomain.Account) (*domain.Message, error) {
 	if externalID == "" {
 		return nil, ErrMissingExternalID
 	}
 
-	googleClient, err := google.NewGoogleClient(ctx, account)
+	_, err := u.googleClient.RefreshToken(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = googleClient.RefreshToken(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	gmailService, err := google.NewGmailService(ctx, googleClient)
+	gmailService, err := google.NewGmailClient(ctx, u.googleClient)
 	if err != nil {
 		return nil, err
 	}

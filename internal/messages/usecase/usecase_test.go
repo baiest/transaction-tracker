@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/gmail/v1"
 
-	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/api/services/gmail/models"
+	accountsDomain "transaction-tracker/internal/accounts/domain"
 )
 
 func TestIsMessageFiltered(t *testing.T) {
@@ -65,7 +65,7 @@ func TestProcess_MissingExternalID(t *testing.T) {
 	ctx := context.Background()
 	u := &messageUsecase{}
 
-	account := &accounts.Account{ID: "acc1"}
+	account := &accountsDomain.Account{ID: "acc1"}
 
 	msg, err := u.Process(ctx, "notif1", "", account)
 	c.Nil(msg)
