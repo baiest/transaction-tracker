@@ -3,17 +3,10 @@ package routes
 import (
 	"transaction-tracker/api/models"
 	gmailServices "transaction-tracker/api/services/gmail"
-	services "transaction-tracker/api/services/google"
 )
 
 var (
 	gmailRoutes = []models.Route{
-		{
-			Endpoint:    "/gmail/watchers",
-			Method:      models.DELETE,
-			HandlerFunc: services.GoogleDeleteWath(),
-			ApiVersion:  API_VERSION,
-		},
 		{
 			Endpoint:    "/gmail/emails/histories/:historyID",
 			Method:      models.GET,
@@ -24,18 +17,6 @@ var (
 			Endpoint:    "/gmail/emails/histories/:historyID/save",
 			Method:      models.POST,
 			HandlerFunc: gmailServices.StoreEmailByFilters(),
-			ApiVersion:  API_VERSION,
-		},
-		{
-			Endpoint:    "/gmail/emails/messages/:messageID",
-			Method:      models.POST,
-			HandlerFunc: gmailServices.ProcessAndSaveMessage(),
-			ApiVersion:  API_VERSION,
-		},
-		{
-			Endpoint:    "/gmail/emails/messages/:messageID",
-			Method:      models.GET,
-			HandlerFunc: gmailServices.GetMessage(),
 			ApiVersion:  API_VERSION,
 		},
 		{

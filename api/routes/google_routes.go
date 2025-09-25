@@ -1,32 +1,44 @@
 package routes
 
 import (
+	"transaction-tracker/api/handler"
 	"transaction-tracker/api/models"
-	services "transaction-tracker/api/services/google"
 )
 
-var (
-	googleRoutes = []models.Route{
+func AccountRoutes(h *handler.AccountHandler) []models.Route {
+	return []models.Route{
 		{
-			Endpoint:       "/google/auth/generate",
+			Endpoint:       "/accounts/login",
 			Method:         models.POST,
-			HandlerFunc:    services.GoogleGenerateAuthLink(),
+			HandlerFunc:    h.GoogleGenerateAuthLink,
 			ApiVersion:     API_VERSION,
 			NoRequiresAuth: true,
 		},
 		{
-			Endpoint:       "/google/auth/save",
+			Endpoint:       "/accounts/save",
 			Method:         models.GET,
-			HandlerFunc:    services.GoogleLogin(),
+			HandlerFunc:    h.SaveLogin,
 			ApiVersion:     API_VERSION,
 			NoRequiresAuth: true,
 		},
 		{
-			Endpoint:       "/google/auth/refresh",
+			Endpoint:       "/accounts/refresh",
 			Method:         models.POST,
-			HandlerFunc:    services.Refresh(),
+			HandlerFunc:    h.Refresh,
 			ApiVersion:     API_VERSION,
 			NoRequiresAuth: true,
+		},
+		{
+			Endpoint:    "/accounts/watchers",
+			Method:      models.POST,
+			HandlerFunc: h.CreateWatcher,
+			ApiVersion:  API_VERSION,
+		},
+		{
+			Endpoint:    "/accounts/watchers",
+			Method:      models.DELETE,
+			HandlerFunc: h.DeleteWatcher,
+			ApiVersion:  API_VERSION,
 		},
 	}
-)
+}
