@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"transaction-tracker/api/services/accounts"
+	"transaction-tracker/internal/accounts/usecase"
 	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 
@@ -13,15 +14,12 @@ import (
 )
 
 type Server struct {
-	Port   string
-	engine *gin.Engine
+	Port           string
+	accountUsecase usecase.AccountsUseCase
+	engine         *gin.Engine
 }
 
-var (
-	accountService *accounts.AccountService
-)
-
-func NewServer(port int) *Server {
+func NewServer(accountUsecase usecase.AccountsUseCase, port int) *Server {
 	engine := gin.Default()
 
 	engine.Use(InitLogger())
@@ -36,24 +34,14 @@ func NewServer(port int) *Server {
 	}))
 
 	return &Server{
-		Port:   fmt.Sprintf(":%d", port),
-		engine: engine,
+		Port:           fmt.Sprintf(":%d", port),
+		engine:         engine,
+		accountUsecase: accountUsecase,
 	}
 }
 
-func AuthMiddleware() gin.HandlerFunc {
+func (s *Server) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if accountService == nil {
-			service, err := accounts.NewAccountService(c)
-			if err != nil {
-				NewResponseInternalServerError(c)
-
-				return
-			}
-
-			accountService = service
-		}
-
 		tokenString, err := c.Cookie("token")
 		if err != nil {
 
@@ -91,7 +79,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		account, err := accountService.GetAccount(c, id)
+		account, err := s.accountUsecase.GetAccount(c.Request.Context(), id)
 		if err != nil {
 			NewResponseInternalServerError(c)
 
@@ -140,7 +128,7 @@ func (s *Server) AddRoutes(routes []Route) {
 
 	for _, r := range routes {
 		groupPublic := api.Group(r.ApiVersion)
-		groupPrivate := api.Group(r.ApiVersion, AuthMiddleware())
+		groupPrivate := api.Group(r.ApiVersion, s.AuthMiddleware())
 
 		if r.NoRequiresAuth {
 			groupPublic.Handle(string(r.Method), r.Endpoint, r.HandlerFunc)
