@@ -94,3 +94,19 @@ func (a *accountsRepository) SaveGoogleAccount(ctx context.Context, accountID st
 
 	return err
 }
+
+func (a *accountsRepository) UpdateAccount(ctx context.Context, account *domain.Account) error {
+	_, err := a.collection.UpdateOne(
+		ctx,
+		bson.M{"_id": account.ID},
+		bson.M{
+			"$set": bson.M{
+				"email":      account.Email,
+				"updated_at": a.nowFunc(),
+			},
+		},
+		options.UpdateOne().SetUpsert(true),
+	)
+
+	return err
+}

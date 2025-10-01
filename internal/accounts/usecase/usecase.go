@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 	"transaction-tracker/internal/accounts/domain"
 	"transaction-tracker/internal/accounts/repository"
@@ -18,31 +19,42 @@ var (
 )
 
 type accountsUseCase struct {
-	googleClient *google.GoogleClient
-	gmailClient  *google.GmailService
+	googleClient google.GoogleClientAPI
 	repo         repository.AccountsRepository
 }
 
-func NewAccountsUseCase(googleClient *google.GoogleClient, gmailClient *google.GmailService, repo repository.AccountsRepository) AccountsUseCase {
-	return &accountsUseCase{googleClient: googleClient, gmailClient: gmailClient, repo: repo}
+// NewAccountsUseCase creates a new AccountsUsecase with the provided Google client and repository.
+func NewAccountsUseCase(googleClient google.GoogleClientAPI, repo repository.AccountsRepository) AccountsUsecase {
+	return &accountsUseCase{googleClient: googleClient, repo: repo}
 }
 
+// GetAuthURL returns the URL for the Google authentication page.
 func (a *accountsUseCase) GetAuthURL() string {
 	return a.googleClient.GetAuthURL()
 }
 
+// CreateAccount creates a new account.
 func (a *accountsUseCase) CreateAccount(ctx context.Context, account *domain.Account) error {
 	return a.repo.CreateAccount(ctx, account)
 }
 
+// GetAccount retrieves an account by its ID.
 func (a *accountsUseCase) GetAccount(ctx context.Context, accountID string) (*domain.Account, error) {
 	return a.repo.GetAccount(ctx, accountID)
 }
 
+// GetAccountByEmail retrieves an account by its email address.
 func (a *accountsUseCase) GetAccountByEmail(ctx context.Context, email string) (*domain.Account, error) {
+	if email == "" {
+		return nil, errors.New("email cannot be empty")
+	}
+
+	email = strings.ToLower(email)
+
 	return a.repo.GetAccountByEmail(ctx, email)
 }
 
+// GetOrCreateAccountByEmail retrieves an account by its email address, or creates a new one if it doesn't exist.
 func (a *accountsUseCase) GetOrCreateAccountByEmail(ctx context.Context, email string) (*domain.Account, error) {
 	account, err := a.repo.GetAccountByEmail(ctx, email)
 	if err != nil {
@@ -50,9 +62,9 @@ func (a *accountsUseCase) GetOrCreateAccountByEmail(ctx context.Context, email s
 			return nil, err
 		}
 
-		newAccount := &domain.Account{
-			ID:    fmt.Sprintf("acc_%d", time.Now().UnixNano()),
-			Email: email,
+		newAccount, err := domain.NewAccount(email)
+		if err != nil {
+			return nil, err
 		}
 
 		if err := a.repo.CreateAccount(ctx, newAccount); err != nil {
@@ -65,19 +77,35 @@ func (a *accountsUseCase) GetOrCreateAccountByEmail(ctx context.Context, email s
 	return account, err
 }
 
-func (a *accountsUseCase) SaveGoogleAccount(ctx context.Context, accountID string, code string) error {
-	token, err := a.googleClient.Config.Exchange(ctx, code)
+// SaveGoogleAccount exchanges the authorization code for a token, retrieves the user's email, and saves the Google account information.
+func (a *accountsUseCase) SaveGoogleAccount(ctx context.Context, code string) (*domain.Account, error) {
+	token, err := a.googleClient.Client.Exchange(ctx, code)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	googleAccount := &google.GoogleAccount{
 		Token: token,
 	}
 
-	return a.repo.SaveGoogleAccount(ctx, accountID, googleAccount)
+	a.googleClient.SetToken(token)
+
+	email, err := a.googleClient.GetUserEmail(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	account, err := a.GetOrCreateAccountByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+
+	account.GoogleAccount = googleAccount
+
+	return account, a.repo.SaveGoogleAccount(ctx, account.ID, googleAccount)
 }
 
+// GenerateTokens generates new access and refresh tokens for the provided account.
 func (a *accountsUseCase) GenerateTokens(ctx context.Context, account *domain.Account) (string, string, string, error) {
 	accessClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":    account.ID,
@@ -105,10 +133,30 @@ func (a *accountsUseCase) GenerateTokens(ctx context.Context, account *domain.Ac
 
 	account.RefreshToken = refreshToken
 
-	return accessToken, refreshToken, os.Getenv("REDIRECT_URL"), nil
+	err = a.RefreshGoogleToken(ctx, account)
+	if err != nil {
+		return "", "", "", err
+	}
 
+	err = a.repo.UpdateAccount(ctx, account)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return accessToken, refreshToken, os.Getenv("REDIRECT_URL"), nil
 }
 
+// RefreshGoogleToken refreshes the Google OAuth2 token for the provided account.
+func (a *accountsUseCase) RefreshGoogleToken(ctx context.Context, account *domain.Account) error {
+	_, err := a.googleClient.RefreshToken(ctx, account.GoogleAccount)
+	if err != nil {
+		return err
+	}
+
+	return a.repo.SaveGoogleAccount(ctx, account.ID, account.GoogleAccount)
+}
+
+// VerifyToken verifies the given JWT token string.
 func (a *accountsUseCase) VerifyToken(tokenString string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
@@ -125,11 +173,17 @@ func (a *accountsUseCase) VerifyToken(tokenString string) (*jwt.Token, error) {
 	return token, nil
 }
 
+// CreateWatcher creates a new Gmail watcher for the provided account.
 func (a *accountsUseCase) CreateWatcher(ctx context.Context, account *domain.Account) error {
 	projectID := "transaction-tracker-2473"
 	topicName := fmt.Sprintf("projects/%s/topics/gmail-notifications", projectID)
 
-	_, _, err := a.gmailClient.CreateWatch(ctx, topicName)
+	gmailClient, err := google.NewGmailClient(ctx, a.googleClient.Config.Client(ctx, account.GoogleAccount.Token))
+	if err != nil {
+		return err
+	}
+
+	_, _, err = gmailClient.CreateWatch(ctx, topicName)
 	if err != nil {
 		return err
 	}
@@ -139,8 +193,14 @@ func (a *accountsUseCase) CreateWatcher(ctx context.Context, account *domain.Acc
 	return a.repo.SaveGoogleAccount(ctx, account.ID, account.GoogleAccount)
 }
 
+// DeleteWatcher deletes the Gmail watcher for the provided account.
 func (a *accountsUseCase) DeleteWatcher(ctx context.Context, account *domain.Account) error {
-	err := a.gmailClient.DeleteWatch()
+	gmailClient, err := google.NewGmailClient(ctx, a.googleClient.Config.Client(ctx, account.GoogleAccount.Token))
+	if err != nil {
+		return err
+	}
+
+	err = gmailClient.DeleteWatch()
 	if err != nil {
 		return err
 	}
@@ -148,4 +208,9 @@ func (a *accountsUseCase) DeleteWatcher(ctx context.Context, account *domain.Acc
 	account.GoogleAccount.IsWatchingGmail = false
 
 	return a.repo.SaveGoogleAccount(ctx, account.ID, account.GoogleAccount)
+}
+
+// UpdateAccount updates the provided account.
+func (a *accountsUseCase) UpdateAccount(ctx context.Context, account *domain.Account) error {
+	return a.repo.UpdateAccount(ctx, account)
 }

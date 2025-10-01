@@ -9,6 +9,15 @@ import (
 	"github.com/google/uuid"
 )
 
+var (
+	_account_prefix = "AID"
+	secretKey       = "secret"
+
+	// ErrMissingEmail is returned when an email is not provided to create a new account.
+	ErrMissingEmail = errors.New("missing email")
+)
+
+// Account represents a user account in the system.
 type Account struct {
 	ID            string                `bson:"_id"`
 	Email         string                `bson:"email"`
@@ -18,13 +27,17 @@ type Account struct {
 	UpdatedAt     time.Time             `bson:"updated_at"`
 }
 
-var (
-	_account_prefix = "AID"
-	secretKey       = "secret"
+// LogProperties returns a map of the account's properties for logging.
+func (a *Account) LogProperties() map[string]string {
+	return map[string]string{
+		"id":         a.ID,
+		"email":      a.Email,
+		"created_at": a.CreatedAt.String(),
+		"updated_at": a.UpdatedAt.String(),
+	}
+}
 
-	ErrMissingEmail = errors.New("missing email")
-)
-
+// NewAccount creates a new Account with the provided email.
 func NewAccount(email string) (*Account, error) {
 	if email == "" {
 		return nil, ErrMissingEmail
