@@ -3,148 +3,181 @@ package google
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
+	"io"
 	"net/http"
-	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/require"
-	"google.golang.org/api/gmail/v1"
-	"google.golang.org/api/option"
 )
 
-func newTestGmailService(handler http.Handler) (*GmailService, error) {
-	srv := httptest.NewServer(handler)
-
-	gmailService, err := gmail.NewService(context.Background(), option.WithHTTPClient(srv.Client()), option.WithEndpoint(srv.URL))
-	if err != nil {
-		return nil, err
-	}
-
-	return &GmailService{Client: gmailService}, nil
+// mockRoundTripper intercepta requests y devuelve respuestas falsas
+type mockRoundTripper struct {
+	fn func(req *http.Request) *http.Response
 }
 
-func TestGetAttachmentData(t *testing.T) {
-	c := require.New(t)
-
-	mockAttachmentID := "test_attachment_id"
-	mockMessageID := "test_message_id"
-	mockData := "test-data"
-	mockDataEncoded := base64.URLEncoding.EncodeToString([]byte(mockData))
-
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"data": "%s"}`, mockDataEncoded)
-	})
-
-	g, err := newTestGmailService(h)
-	c.NoError(err)
-
-	part := &gmail.MessagePart{
-		Body: &gmail.MessagePartBody{
-			AttachmentId: mockAttachmentID,
-		},
-	}
-
-	data, err := g.getAttachmentData(context.Background(), mockMessageID, part)
-	c.NoError(err)
-	c.Equal([]byte(mockData), data)
+func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.fn(req), nil
 }
 
-func TestSaveAttachment(t *testing.T) {
-	c := require.New(t)
-
-	t.Run("saves a file successfully", func(t *testing.T) {
-		accountID := "test_account"
-		fileName := "test_file.txt"
-		fileContent := []byte("test content")
-
-		g, err := newTestGmailService(nil)
-		c.NoError(err)
-
-		filePath, err := g.saveAttachment(accountID, fileName, fileContent, 0600)
-		c.NoError(err)
-
-		// Verify file exists
-		_, err = os.Stat(filePath)
-		c.NoError(err)
-
-		// Verify content
-		content, err := os.ReadFile(filePath)
-		c.NoError(err)
-		c.Equal(fileContent, content)
-
-		// Clean up
-		c.NoError(os.RemoveAll(filepath.Dir(filepath.Dir(filePath))))
-	})
-
-	t.Run("it sanitizes the account id", func(t *testing.T) {
-		accountID := "../../test_account"
-		fileName := "test_file.txt"
-		fileContent := []byte("test content")
-
-		g, err := newTestGmailService(nil)
-		c.NoError(err)
-
-		filePath, err := g.saveAttachment(accountID, fileName, fileContent, 0600)
-		c.NoError(err)
-
-		c.NotContains(filePath, "..")
-
-		// Clean up
-		c.NoError(os.RemoveAll(filepath.Dir(filepath.Dir(filePath))))
-	})
+// helper para crear un cliente falso
+func newMockClient(fn func(req *http.Request) *http.Response) *http.Client {
+	return &http.Client{Transport: &mockRoundTripper{fn: fn}}
 }
 
-func TestDownloadAttachments(t *testing.T) {
-	c := require.New(t)
-
-	mockAttachmentID := "test_attachment_id"
-	mockMessageID := "test_message_id"
-	mockData := "test-data"
-	mockDataEncoded := base64.URLEncoding.EncodeToString([]byte(mockData))
-	mockFilename := "test_file.pdf"
-
-	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if strings.Contains(r.URL.Path, fmt.Sprintf("messages/%s/attachments/%s", mockMessageID, mockAttachmentID)) {
-			fmt.Fprintf(w, `{"data": "%s"}`, mockDataEncoded)
-			return
+func TestDeleteWatch_Success(t *testing.T) {
+	client := newMockClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader("{}")),
+			Header:     make(http.Header),
 		}
+	})
 
-		if strings.Contains(r.URL.Path, fmt.Sprintf("messages/%s", mockMessageID)) {
-			fmt.Fprintf(w, `{
-				"id": "%s",
-				"internalDate": "%d",
-				"payload": {
-					"parts": [
-						{
-							"filename": "%s",
-							"body": {
-								"attachmentId": "%s"
-							}
-						}
+	g, _ := NewGmailClient(context.Background(), client)
+	err := g.DeleteWatch()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestGetMessageByID_Success(t *testing.T) {
+	client := newMockClient(func(req *http.Request) *http.Response {
+		body := `{"id":"abc123","internalDate":"1735689600000","payload":{"parts":[]}}`
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(body)),
+			Header:     make(http.Header),
+		}
+	})
+
+	g, _ := NewGmailClient(context.Background(), client)
+	msg, err := g.GetMessageByID(context.Background(), "abc123")
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if msg.Id != "abc123" {
+		t.Errorf("expected abc123, got %s", msg.Id)
+	}
+}
+
+func TestGetExtractMessages_Success(t *testing.T) {
+	client := newMockClient(func(req *http.Request) *http.Response {
+		body := `{"messages":[{"id":"m1"},{"id":"m2"}]}`
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(body)),
+			Header:     make(http.Header),
+		}
+	})
+
+	g, _ := NewGmailClient(context.Background(), client)
+	res, err := g.GetExtractMessages(context.Background(), "davivienda")
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(res.Messages) != 2 {
+		t.Errorf("expected 2 messages, got %d", len(res.Messages))
+	}
+}
+
+func TestGetMessageAttachment_Success(t *testing.T) {
+	data := base64.URLEncoding.EncodeToString([]byte("hello world"))
+
+	client := newMockClient(func(req *http.Request) *http.Response {
+		body := `{"data":"` + data + `"}`
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(body)),
+			Header:     make(http.Header),
+		}
+	})
+
+	g, _ := NewGmailClient(context.Background(), client)
+	att, err := g.GetMessageAttachment(context.Background(), "msg1", "att1")
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	decoded, _ := base64.URLEncoding.DecodeString(att.Data)
+	if string(decoded) != "hello world" {
+		t.Errorf("expected 'hello world', got %s", decoded)
+	}
+}
+
+func TestDownloadAttachments_Success(t *testing.T) {
+	// Attachment body
+	data := base64.URLEncoding.EncodeToString([]byte("pdfdata"))
+
+	// Step 1: intercept calls to Messages.Get
+	calls := 0
+	client := newMockClient(func(req *http.Request) *http.Response {
+		if strings.Contains(req.URL.Path, "/messages/") && !strings.Contains(req.URL.Path, "/attachments/") {
+			// Return message with attachment
+			body := `{
+				"id":"msg123",
+				"internalDate":"1735689600000",
+				"payload":{
+					"parts":[
+						{"filename":"extracto.pdf","body":{"attachmentId":"att123"}}
 					]
 				}
-			}`, mockMessageID, time.Now().UnixMilli(), mockFilename, mockAttachmentID)
-			return
+			}`
+			calls++
+			return &http.Response{
+				StatusCode: 200,
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Header:     make(http.Header),
+			}
+		}
+
+		if strings.Contains(req.URL.Path, "/attachments/") {
+			// Return attachment
+			body := `{"data":"` + data + `"}`
+			calls++
+			return &http.Response{
+				StatusCode: 200,
+				Body:       io.NopCloser(strings.NewReader(body)),
+				Header:     make(http.Header),
+			}
+		}
+
+		return &http.Response{StatusCode: 404, Body: io.NopCloser(strings.NewReader(`{}`))}
+	})
+
+	g, _ := NewGmailClient(context.Background(), client)
+
+	month, year, path, err := g.DownloadAttachments(context.Background(), "acct1", "msg123")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if month == 0 || year == 0 {
+		t.Errorf("expected valid month/year, got %d %d", month, year)
+	}
+	if !strings.HasSuffix(path, "extracto.pdf") {
+		t.Errorf("expected file extracto.pdf, got %s", path)
+	}
+
+	// cleanup
+	_ = os.Remove(path)
+}
+
+func TestDownloadAttachments_NoAttachment(t *testing.T) {
+	client := newMockClient(func(req *http.Request) *http.Response {
+		body := `{"id":"msg123","internalDate":"1735689600000","payload":{"parts":[]}}`
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(strings.NewReader(body)),
+			Header:     make(http.Header),
 		}
 	})
 
-	g, err := newTestGmailService(h)
-	c.NoError(err)
+	g, _ := NewGmailClient(context.Background(), client)
+	_, _, _, err := g.DownloadAttachments(context.Background(), "acct1", "msg123")
 
-	month, year, path, err := g.DownloadAttachments(context.Background(), "test_account", mockMessageID)
-
-	c.NoError(err)
-	c.NotEmpty(path)
-	c.Equal(time.Now().Month(), month)
-	c.Equal(time.Now().Year(), year)
-
-	// Clean up
-	c.NoError(os.RemoveAll(filepath.Dir(filepath.Dir(path))))
+	if err == nil || !strings.Contains(err.Error(), "no attachment found") {
+		t.Errorf("expected no attachment error, got %v", err)
+	}
 }

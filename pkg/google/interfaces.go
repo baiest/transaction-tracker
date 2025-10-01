@@ -17,6 +17,7 @@ type GoogleClientAPI interface {
 	GetUserEmail(ctx context.Context) (string, error)
 	GmailService(ctx context.Context, googleAccount *GoogleAccount) (GmailAPI, error)
 	RefreshToken(ctx context.Context, googleAccount *GoogleAccount) (*oauth2.Token, error)
+	Config() *oauth2.Config
 }
 
 // GmailAPI defines the interface for GmailService.

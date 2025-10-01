@@ -43,7 +43,7 @@ func TestGetAuthURL(t *testing.T) {
 		},
 	}
 
-	client := &GoogleClient{Config: config}
+	client := &googleClient{config: config}
 
 	url := client.GetAuthURL()
 
@@ -57,7 +57,7 @@ func TestGetAuthURL(t *testing.T) {
 }
 
 func TestSetToken(t *testing.T) {
-	client := &GoogleClient{}
+	client := &googleClient{}
 	token := &oauth2.Token{AccessToken: "test_token"}
 
 	client.SetToken(token)
@@ -81,7 +81,7 @@ func TestRefreshToken(t *testing.T) {
 
 	t.Run("TokenNotExpired", func(t *testing.T) {
 		config := &oauth2.Config{}
-		client := &GoogleClient{Config: config}
+		client := &googleClient{config: config}
 		googleAccount := &GoogleAccount{
 			Token: &oauth2.Token{
 				Expiry: time.Now().Add(5 * time.Minute),
