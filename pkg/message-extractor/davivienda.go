@@ -7,10 +7,18 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"transaction-tracker/api/services/gmail/models"
-	"transaction-tracker/database/mongo/schemas"
-	"transaction-tracker/internal/movements/domain"
+	extractDomain "transaction-tracker/internal/extracts/domain"
+	movementDomain "transaction-tracker/internal/movements/domain"
 	documentextractor "transaction-tracker/pkg/document-extractor"
+	"unicode/utf8"
+)
+
+var (
+	extractTextFromPDF = documentextractor.ExtractTextFromPDF
+	movementRegex      = regexp.MustCompile(`(?m)^(\d{2}\s+\d{2})\s+\$\s*([\d,]+\.\d{2})([+-])\s+(\d{4})\s+(.+)$`)
+	yearRegex          = regexp.MustCompile(`INFORME DEL MES:.*?/(\d{4})`)
+	regex              = regexp.MustCompile(
+		`Fecha:(?P<fecha>.+)\nHora:(?P<hora>.+)\nValor TransacciÃ³n:\s*(?P<valor>.+)\nClase de Movimiento:\s*(?P<clase>.+),\nLugar de TransacciÃ³n:(?P<lugar>.+)`)
 )
 
 type davivienda struct {
@@ -20,42 +28,37 @@ type davivienda struct {
 	details     string
 	place       string
 	text        string
-	messageType models.MessageType
-	extract     *schemas.GmailExtract
+	messageType MessageType
+	extract     *extractDomain.Extract
+	password    string
 }
 
-var (
-	daviviendaExtractor = &documentextractor.DaviviendaExtract{
-		Password: os.Getenv("EXTRACT_PDF_PASSWORD"),
-	}
-
-	regex = regexp.MustCompile(
-		`Fecha:(?P<fecha>.+)\nHora:(?P<hora>.+)\nValor Transacción:\s*(?P<valor>.+)\nClase de Movimiento:\s*(?P<clase>.+),\nLugar de Transacción:(?P<lugar>.+)`)
-)
-
-func NewDaviviendaExtractor(text string, messageType models.MessageType) MovementExtractor {
+func NewDaviviendaExtractor(text string, messageType MessageType) MovementExtractor {
 	return &davivienda{
 		text:        text,
 		messageType: messageType,
+		password:    os.Getenv("EXTRACT_PDF_PASSWORD"),
 	}
 }
 
-func (d *davivienda) Extract() ([]*domain.Movement, error) {
+func (d *davivienda) Extract() ([]*movementDomain.Movement, error) {
 	switch d.messageType {
-	case models.Movement:
+	case Movement:
 		return d.excecuteMovement()
-	case models.Extract:
+	case Extract:
 		return d.excecuteExtract()
+	case Unknown:
+		return []*movementDomain.Movement{}, nil
 	}
 
-	return nil, fmt.Errorf("message type not defined")
+	return nil, fmt.Errorf("message type not defined: %s", d.messageType)
 }
 
-func (d *davivienda) SetExtract(extract *schemas.GmailExtract) {
+func (d *davivienda) SetExtract(extract *extractDomain.Extract) {
 	d.extract = extract
 }
 
-func (d *davivienda) excecuteMovement() ([]*domain.Movement, error) {
+func (d *davivienda) excecuteMovement() ([]*movementDomain.Movement, error) {
 	cleanedText := cleanAndNormalizeText(d.text)
 
 	matches := regex.FindStringSubmatch(cleanedText)
@@ -102,66 +105,40 @@ func (d *davivienda) excecuteMovement() ([]*domain.Movement, error) {
 		}
 	}
 
-	movementType := domain.Income
+	movementType := movementDomain.Income
 	if strings.Contains(d.details, "Descuento") {
-		movementType = domain.Expense
+		movementType = movementDomain.Expense
 	}
 
-	return []*domain.Movement{domain.NewMovement(
+	return []*movementDomain.Movement{movementDomain.NewMovement(
 		"",
 		"",
 		"",
 		"",
 		d.details+" "+d.place,
 		d.value,
-		domain.Unknown,
+		movementDomain.Unknown,
 		movementType,
 		time.Date(
 			d.date.Year(), d.date.Month(), d.date.Day(),
 			d.hour.Hour(), d.hour.Minute(), d.hour.Second(), 0, d.hour.Location(),
 		),
-		domain.EmailSource,
+		movementDomain.EmailSource,
 	)}, nil
 }
 
-func (d *davivienda) excecuteExtract() ([]*domain.Movement, error) {
+func (d *davivienda) excecuteExtract() ([]*movementDomain.Movement, error) {
 	if d.extract == nil {
 		return nil, fmt.Errorf("missing extract")
 	}
 
-	if daviviendaExtractor.Password == "" {
+	if d.password == "" {
 		return nil, fmt.Errorf("missing extract password")
 	}
 
-	movementsExtracted := daviviendaExtractor.GetMovements(d.extract.FilePath)
-	if len(movementsExtracted) == 0 {
-		return nil, fmt.Errorf("missing movements from extract")
-	}
-
-	movements := []*domain.Movement{}
-
-	for _, m := range movementsExtracted {
-		movementType := domain.Income
-		if m.IsNegative {
-			movementType = domain.Expense
-		}
-
-		movement := domain.NewMovement(
-			"",
-			"",
-			"",
-			"",
-			m.Detail,
-			m.Value,
-			domain.Unknown,
-			movementType,
-			m.Date,
-			domain.ExtractSource,
-		)
-
-		if movement != nil {
-			movements = append(movements, movement)
-		}
+	movements, err := d.GetMovements()
+	if err != nil {
+		return nil, fmt.Errorf("error extracting movements: %v", err)
 	}
 
 	return movements, nil
@@ -189,17 +166,17 @@ func cleanAndNormalizeText(text string) string {
 
 				line = "Clase de Movimiento: " + value
 			}
-		} else if strings.HasPrefix(line, "Valor Transacción:") {
+		} else if strings.HasPrefix(line, "Valor TransacciÃ³n:") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
 				value := strings.TrimSpace(parts[1])
-				line = "Valor Transacción: " + value
+				line = "Valor TransacciÃ³n: " + value
 			}
-		} else if strings.HasPrefix(line, "Lugar de Transacción:") {
+		} else if strings.HasPrefix(line, "Lugar de TransacciÃ³n:") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
 				value := strings.TrimSpace(parts[1])
-				line = "Lugar de Transacción:" + value
+				line = "Lugar de TransacciÃ³n:" + value
 			}
 		}
 
@@ -207,4 +184,93 @@ func cleanAndNormalizeText(text string) string {
 	}
 
 	return strings.Join(cleanedLines, "\n")
+}
+
+func (d *davivienda) GetMovements() ([]*movementDomain.Movement, error) {
+	if d.extract == nil || d.extract.Path == "" || d.password == "" {
+		return nil, fmt.Errorf("missing extract, path or password")
+	}
+
+	text, err := extractTextFromPDF(d.extract.Path, d.password)
+	if err != nil {
+		return nil, err
+	}
+
+	year, err := parseYear(text)
+	if err != nil {
+		return nil, err
+	}
+
+	matches := movementRegex.FindAllStringSubmatch(text, -1)
+	movements := make([]*movementDomain.Movement, 0, len(matches))
+
+	for _, m := range matches {
+		mov, err := parseMovement(m, year, d.extract.AccountID, d.extract.MessageID, d.extract.ID)
+		if err != nil {
+			// Depending on the desired behavior, you might want to log the error and continue
+			// or return immediately. For now, we return on the first error.
+			return nil, err
+		}
+
+		movements = append(movements, mov)
+	}
+
+	return movements, nil
+}
+
+func parseYear(text string) (int64, error) {
+	yearMatch := yearRegex.FindStringSubmatch(text)
+	if len(yearMatch) < 2 {
+		// Return a default value or an error if the year is not found.
+		// For this example, we return 0 and no error, but you might want to handle this differently.
+		return 0, nil
+	}
+
+	year, err := strconv.ParseInt(yearMatch[1], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("error parsing year: %w", err)
+	}
+
+	return year, nil
+}
+
+func parseMovement(m []string, year int64, accountID, messageID, extractID string) (*movementDomain.Movement, error) {
+	dayAndMonth := strings.Split(m[1], " ")
+	date, err := time.Parse("2006-01-02", fmt.Sprintf("%d-%s-%s", year, dayAndMonth[1], dayAndMonth[0]))
+	if err != nil {
+		return nil, fmt.Errorf("error parsing date: %w", err)
+	}
+
+	value, err := strconv.ParseFloat(strings.Replace(m[2], ",", "", -1), 64)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing value: %w", err)
+	}
+
+	movementType := movementDomain.Income
+	if m[3] == "-" {
+		movementType = movementDomain.Expense
+	}
+
+	mov := movementDomain.NewMovement(
+		accountID,
+		"",
+		messageID,
+		extractID,
+		ToValidUTF8(strings.TrimSpace(m[5])),
+		value,
+		movementDomain.Unknown,
+		movementType,
+		date,
+		movementDomain.ExtractSource,
+	)
+
+	return mov, nil
+}
+
+func ToValidUTF8(s string) string {
+	if utf8.ValidString(s) {
+		return s
+	}
+
+	return string([]rune(s))
 }

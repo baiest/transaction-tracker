@@ -2,15 +2,10 @@ package messageextractor
 
 import (
 	"fmt"
-	"transaction-tracker/api/services/gmail/models"
 )
 
-func NewMovementExtractor(transformerType string, decodedBody string, messageType models.MessageType) (MovementExtractor, error) {
-	if messageType == models.Extract {
-		return NewDaviviendaExtractor("", messageType), nil
-	}
-
-	if decodedBody == "" {
+func NewMovementExtractor(transformerType string, decodedBody string, messageType MessageType) (MovementExtractor, error) {
+	if messageType == Movement && decodedBody == "" {
 		return nil, fmt.Errorf("missing body")
 	}
 
