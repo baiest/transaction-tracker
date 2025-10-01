@@ -1,4 +1,3 @@
-# extractor.py
 import pdfplumber
 import sys
 
@@ -17,7 +16,7 @@ def extract_text(pdf_path, password):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python extractor.py archivo.pdf password")
+        print("Usage: python extractor.py file.pdf password")
         sys.exit(1)
 
     pdf_file = sys.argv[1]
