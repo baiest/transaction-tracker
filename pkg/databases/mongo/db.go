@@ -17,14 +17,11 @@ type CollectionName string
 const (
 	defaultMongoURI = "mongodb://localhost:27017"
 
-	TRANSACTIONS        DatabaseName   = "transactions"
-	GOOGLE_ACCOUNTS     CollectionName = "google_accounts"
-	GMAIL_EXTRACTS      CollectionName = "gmail_extracts"
-	GMAIL_NOTIFICATIONS CollectionName = "gmail_notifications"
-	MESSAGES            CollectionName = "messages"
-
-	MOVEMENTS CollectionName = "movements"
-	ACCOUNTS  CollectionName = "accounts"
+	TRANSACTIONS DatabaseName   = "transactions"
+	EXTRACTS     CollectionName = "extracts"
+	MESSAGES     CollectionName = "messages"
+	MOVEMENTS    CollectionName = "movements"
+	ACCOUNTS     CollectionName = "accounts"
 )
 
 type MongoClient struct {
@@ -32,7 +29,7 @@ type MongoClient struct {
 }
 
 // NewClient returns a connected *mongo.Client using MONGO_URI if present.
-func NewClient(ctx context.Context) (*MongoClient, error) {
+func NewClient(ctx context.Context) (context.Context, *MongoClient, error) {
 	uri := os.Getenv("MONGO_URI")
 	if uri == "" {
 		uri = defaultMongoURI
@@ -46,13 +43,13 @@ func NewClient(ctx context.Context) (*MongoClient, error) {
 
 	_client, err := mongo.Connect(opts)
 	if err != nil {
-		return nil, fmt.Errorf("error creating mongo client: %w", err)
+		return ctx, nil, fmt.Errorf("error creating mongo client: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	return &MongoClient{client: _client}, nil
+	return ctx, &MongoClient{client: _client}, nil
 }
 
 func (c *MongoClient) Collection(db DatabaseName, collection CollectionName) (databases.CollectionAPI, error) {

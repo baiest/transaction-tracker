@@ -17,7 +17,7 @@ func TestNewClient_DefaultURI(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	client, err := NewClient(ctx)
+	_, client, err := NewClient(ctx)
 
 	c.NoError(err)
 	c.NotNil(client)
@@ -33,7 +33,7 @@ func TestNewClient_WithEnvURI(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	client, err := NewClient(ctx)
+	_, client, err := NewClient(ctx)
 
 	c.NoError(err)
 	c.NotNil(client)
