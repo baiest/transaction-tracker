@@ -44,6 +44,11 @@ func (m *MockGoogleClient) RefreshToken(ctx context.Context, googleAccount *Goog
 	return args.Get(0).(*oauth2.Token), args.Error(1)
 }
 
+func (m *MockGoogleClient) Config() *oauth2.Config {
+	args := m.Called()
+	return args.Get(0).(*oauth2.Config)
+}
+
 // MockGmailService is a mock of GmailAPI
 type MockGmailService struct {
 	mock.Mock

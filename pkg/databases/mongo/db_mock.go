@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type MockCollection struct {
-	InsertOneFn func(ctx context.Context, doc any, opts ...*options.InsertOneOptions) (*mongo.InsertOneResult, error)
-	FindOneFn   func(ctx context.Context, filter any, opts ...*options.FindOneOptions) *mongo.SingleResult
-	FindFn      func(ctx context.Context, filter any, opts ...*options.FindOptions) (*mongo.Cursor, error)
-	UpdateOneFn func(ctx context.Context, filter any, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+	InsertOneFn func(ctx context.Context, doc any, opts ...options.Lister[options.InsertOneOptions]) (*mongo.InsertOneResult, error)
+	FindOneFn   func(ctx context.Context, filter any, opts ...options.Lister[options.FindOneOptions]) *mongo.SingleResult
+	FindFn      func(ctx context.Context, filter any, opts ...options.Lister[options.FindOptions]) (*mongo.Cursor, error)
+	UpdateOneFn func(ctx context.Context, filter any, update any, opts ...options.Lister[options.UpdateOneOptions]) (*mongo.UpdateResult, error)
+	DeleteOneFn func(ctx context.Context, filter any, opts ...options.Lister[options.DeleteOneOptions]) (*mongo.DeleteResult, error)
 }
 
 // MockMongoClient is a fake implementation of MongoClient for testing purposes.
@@ -43,18 +44,22 @@ func (m *MockMongoClient) Collection(db DatabaseName, collection CollectionName)
 	return dummy, nil
 }
 
-func (m *MockCollection) InsertOne(ctx context.Context, doc any, opts ...*options.InsertOneOptions) (*mongo.InsertOneResult, error) {
+func (m *MockCollection) InsertOne(ctx context.Context, doc any, opts ...options.Lister[options.InsertOneOptions]) (*mongo.InsertOneResult, error) {
 	return m.InsertOneFn(ctx, doc, opts...)
 }
 
-func (m *MockCollection) FindOne(ctx context.Context, filter any, opts ...*options.FindOneOptions) *mongo.SingleResult {
+func (m *MockCollection) FindOne(ctx context.Context, filter any, opts ...options.Lister[options.FindOneOptions]) *mongo.SingleResult {
 	return m.FindOneFn(ctx, filter, opts...)
 }
 
-func (m *MockCollection) Find(ctx context.Context, filter any, opts ...*options.FindOptions) (*mongo.Cursor, error) {
+func (m *MockCollection) Find(ctx context.Context, filter any, opts ...options.Lister[options.FindOptions]) (*mongo.Cursor, error) {
 	return m.FindFn(ctx, filter, opts...)
 }
 
-func (m *MockCollection) UpdateOne(ctx context.Context, filter any, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+func (m *MockCollection) UpdateOne(ctx context.Context, filter any, update any, opts ...options.Lister[options.UpdateOneOptions]) (*mongo.UpdateResult, error) {
 	return m.UpdateOneFn(ctx, filter, update, opts...)
+}
+
+func (m *MockCollection) DeleteOne(ctx context.Context, filter any, opts ...options.Lister[options.DeleteOneOptions]) (*mongo.DeleteResult, error) {
+	return m.DeleteOneFn(ctx, filter, opts...)
 }
