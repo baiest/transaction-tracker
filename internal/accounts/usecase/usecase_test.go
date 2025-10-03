@@ -5,47 +5,18 @@ import (
 	"testing"
 
 	"transaction-tracker/internal/accounts/domain"
+	"transaction-tracker/internal/accounts/repository"
 	"transaction-tracker/pkg/google"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-// MockAccountsRepository is a mock of AccountsRepository
-type MockAccountsRepository struct {
-	mock.Mock
-}
-
-func (m *MockAccountsRepository) CreateAccount(ctx context.Context, account *domain.Account) error {
-	args := m.Called(ctx, account)
-	return args.Error(0)
-}
-
-func (m *MockAccountsRepository) GetAccount(ctx context.Context, accountID string) (*domain.Account, error) {
-	args := m.Called(ctx, accountID)
-	return args.Get(0).(*domain.Account), args.Error(1)
-}
-
-func (m *MockAccountsRepository) GetAccountByEmail(ctx context.Context, email string) (*domain.Account, error) {
-	args := m.Called(ctx, email)
-	return args.Get(0).(*domain.Account), args.Error(1)
-}
-
-func (m *MockAccountsRepository) SaveGoogleAccount(ctx context.Context, accountID string, googleAccount *google.GoogleAccount) error {
-	args := m.Called(ctx, accountID, googleAccount)
-	return args.Error(0)
-}
-
-func (m *MockAccountsRepository) UpdateAccount(ctx context.Context, account *domain.Account) error {
-	args := m.Called(ctx, account)
-	return args.Error(0)
-}
-
 func TestNewAccountsUseCase(t *testing.T) {
 	c := require.New(t)
 
-	googleClient := &google.GoogleClient{}
-	repo := new(MockAccountsRepository)
+	googleClient := &google.MockGoogleClient{}
+	repo := new(repository.MockAccountsRepository)
 
 	uc := NewAccountsUseCase(googleClient, repo)
 
@@ -56,7 +27,7 @@ func TestAccountsUseCase_GetAuthURL(t *testing.T) {
 	c := require.New(t)
 
 	googleClient := &google.MockGoogleClient{}
-	repo := new(MockAccountsRepository)
+	repo := new(repository.MockAccountsRepository)
 	uc := NewAccountsUseCase(googleClient, repo)
 
 	googleClient.On("GetAuthURL").Return("http://test.com")
@@ -70,8 +41,8 @@ func TestAccountsUseCase_GetAuthURL(t *testing.T) {
 func TestAccountsUseCase_CreateAccount(t *testing.T) {
 	c := require.New(t)
 
-	googleClient := &google.GoogleClient{}
-	repo := new(MockAccountsRepository)
+	googleClient := &google.MockGoogleClient{}
+	repo := new(repository.MockAccountsRepository)
 	uc := NewAccountsUseCase(googleClient, repo)
 
 	account := &domain.Account{}
@@ -86,8 +57,8 @@ func TestAccountsUseCase_CreateAccount(t *testing.T) {
 func TestAccountsUseCase_GetAccount(t *testing.T) {
 	c := require.New(t)
 
-	googleClient := &google.GoogleClient{}
-	repo := new(MockAccountsRepository)
+	googleClient := &google.MockGoogleClient{}
+	repo := new(repository.MockAccountsRepository)
 	uc := NewAccountsUseCase(googleClient, repo)
 
 	account := &domain.Account{ID: "test-id"}
@@ -103,8 +74,8 @@ func TestAccountsUseCase_GetAccount(t *testing.T) {
 func TestAccountsUseCase_GetAccountByEmail(t *testing.T) {
 	c := require.New(t)
 
-	googleClient := &google.GoogleClient{}
-	repo := new(MockAccountsRepository)
+	googleClient := &google.MockGoogleClient{}
+	repo := new(repository.MockAccountsRepository)
 	uc := NewAccountsUseCase(googleClient, repo)
 
 	account := &domain.Account{Email: "test@example.com"}
@@ -126,4 +97,21 @@ func TestAccountsUseCase_GetAccountByEmail(t *testing.T) {
 		c.Nil(result)
 		c.Equal("email cannot be empty", err.Error())
 	})
+}
+
+func TestAccountsUseCase_UpdateAccount(t *testing.T) {
+	c := require.New(t)
+
+	googleClient := &google.MockGoogleClient{}
+	repo := new(repository.MockAccountsRepository)
+	uc := NewAccountsUseCase(googleClient, repo)
+
+	account := &domain.Account{ID: "id1"}
+
+	repo.On("UpdateAccount", mock.Anything, account).Return(nil)
+
+	err := uc.UpdateAccount(context.Background(), account)
+
+	c.NoError(err)
+	repo.AssertExpectations(t)
 }
