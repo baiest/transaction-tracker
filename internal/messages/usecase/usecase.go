@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/mail"
 	"strings"
 	"time"
-	"transaction-tracker/api/services/gmail/models"
 	accountsDomain "transaction-tracker/internal/accounts/domain"
+	extractsDomain "transaction-tracker/internal/extracts/domain"
+	extractsUsecase "transaction-tracker/internal/extracts/usecase"
 	"transaction-tracker/internal/messages/domain"
 	"transaction-tracker/internal/messages/repository"
-	movementRepository "transaction-tracker/internal/movements/repository"
+	movementsUsecase "transaction-tracker/internal/movements/usecase"
 	loggerModels "transaction-tracker/logger/models"
 	"transaction-tracker/pkg/google"
 	messageextractor "transaction-tracker/pkg/message-extractor"
@@ -37,31 +39,32 @@ var (
 		},
 	}
 
-	ErrMissingMessageID  = errors.New("missing message id")
-	ErrHistoryNotFound   = errors.New("history not found")
-	ErrMissingExternalID = errors.New("missing external id")
+	ErrMissingGmailService = errors.New("missing gmail service")
+	ErrMissingMessageID    = errors.New("missing message id")
+	ErrMissingExternalID   = errors.New("missing external id")
 )
 
 type messageUsecase struct {
-	messageRepo  repository.MessageRepository
-	movementRepo movementRepository.MovementRepository
-	gmailService *google.GmailService
-	googleClient *google.GoogleClient
-	log          *loggerModels.Logger
+	messageRepo    repository.MessageRepository
+	mvmUsecase     movementsUsecase.MovementUsecase
+	extractUsecase extractsUsecase.ExtractsUsecase
+	googleClient   google.GoogleClientAPI
+	log            *loggerModels.Logger
 }
 
 // NewMessageUsecase is the constructor for the use case implementation.
 // It receives a repository interface as a dependency.
-func NewMessageUsecase(ctx context.Context, log *loggerModels.Logger, googleClient *google.GoogleClient, repo repository.MessageRepository, movementsRepo movementRepository.MovementRepository) MessageUsecase {
+func NewMessageUsecase(ctx context.Context, log *loggerModels.Logger, googleClient google.GoogleClientAPI, repo repository.MessageRepository, mvmUsecase movementsUsecase.MovementUsecase, extractUsecase extractsUsecase.ExtractsUsecase) MessageUsecase {
 	return &messageUsecase{
-		messageRepo:  repo,
-		movementRepo: movementsRepo,
-		googleClient: googleClient,
-		log:          log,
+		messageRepo:    repo,
+		mvmUsecase:     mvmUsecase,
+		extractUsecase: extractUsecase,
+		googleClient:   googleClient,
+		log:            log,
 	}
 }
 
-func (u *messageUsecase) GetMessageByIDAndAccountID(ctx context.Context, id string, accountID string) (*domain.Message, error) {
+func (u *messageUsecase) GetMessage(ctx context.Context, id string, accountID string) (*domain.Message, error) {
 	return u.messageRepo.GetMessageByID(ctx, id, accountID)
 }
 
@@ -70,17 +73,12 @@ func (u *messageUsecase) Process(ctx context.Context, notificationID string, ext
 		return nil, ErrMissingExternalID
 	}
 
-	_, err := u.googleClient.RefreshToken(ctx)
+	client := u.googleClient.Client(ctx, account.GoogleAccount)
+
+	gmailService, err := google.NewGmailClient(ctx, client)
 	if err != nil {
 		return nil, err
 	}
-
-	gmailService, err := google.NewGmailClient(ctx, u.googleClient)
-	if err != nil {
-		return nil, err
-	}
-
-	u.gmailService = gmailService
 
 	message, err := u.messageRepo.GetMessageByExternalID(ctx, externalID, account.ID)
 	if err != nil && !errors.Is(err, repository.ErrMessageNotFound) {
@@ -92,10 +90,15 @@ func (u *messageUsecase) Process(ctx context.Context, notificationID string, ext
 	}
 
 	if message != nil {
-		return u.filterAndUpdateMovement(ctx, message, nil)
+		err = u.filterAndUpdateMovement(ctx, gmailService, message, nil)
+		if err != nil {
+			message.Status = domain.Failure
+		}
+
+		return u.updateMessage(ctx, message, err)
 	}
 
-	gmailMessage, err := u.gmailService.GetMessageByID(ctx, externalID)
+	gmailMessage, err := gmailService.GetMessageByID(ctx, externalID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +114,7 @@ func (u *messageUsecase) Process(ctx context.Context, notificationID string, ext
 			}
 
 			if h.Name == "To" {
-				from = h.Value
+				to = h.Value
 			}
 
 			if h.Name == "Date" {
@@ -129,28 +132,23 @@ func (u *messageUsecase) Process(ctx context.Context, notificationID string, ext
 
 	u.messageRepo.SaveMessage(ctx, message)
 
-	return u.filterAndUpdateMovement(ctx, message, gmailMessage)
+	err = u.filterAndUpdateMovement(ctx, gmailService, message, gmailMessage)
+	if err != nil {
+		message.Status = domain.Failure
+	}
+
+	return u.updateMessage(ctx, message, err)
 }
 
-func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, message *domain.Message, emailMessage *gmail.Message) (*domain.Message, error) {
+func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, gmailService google.GmailAPI, message *domain.Message, emailMessage *gmail.Message) error {
 	if message.Status != domain.Pending {
 		message.Status = domain.Pending
-
-		errUpdate := u.messageRepo.UpdateMessage(ctx, message)
-		if errUpdate != nil {
-			u.log.Error(loggerModels.LogProperties{
-				Event: "update_message_failed",
-				Error: errUpdate,
-			})
-
-			return nil, errUpdate
-		}
 	}
 
 	var err error
 
 	if emailMessage == nil {
-		emailMessage, err = u.gmailService.GetMessageByID(ctx, message.ExternalID)
+		emailMessage, err = gmailService.GetMessageByID(ctx, message.ExternalID)
 		if err != nil && strings.Contains(err.Error(), "not found") {
 			u.log.Info(loggerModels.LogProperties{
 				Event: "message_not_found",
@@ -159,7 +157,7 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, message *d
 
 			message.Status = domain.Success
 
-			return u.updateMessage(ctx, message, err)
+			return nil
 		}
 
 		if err != nil {
@@ -168,9 +166,7 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, message *d
 				Error: err,
 			})
 
-			message.Status = domain.Failure
-
-			return u.updateMessage(ctx, message, err)
+			return err
 		}
 	}
 
@@ -184,7 +180,7 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, message *d
 
 		message.Status = domain.Success
 
-		return u.updateMessage(ctx, message, err)
+		return nil
 	}
 
 	body := ""
@@ -201,9 +197,7 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, message *d
 			Error: err,
 		})
 
-		message.Status = domain.Failure
-
-		return u.updateMessage(ctx, message, err)
+		return err
 	}
 
 	mvmExtractor, err := messageextractor.NewMovementExtractor("davivienda", string(decodedBody), messageType)
@@ -213,9 +207,31 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, message *d
 			Error: err,
 		})
 
-		message.Status = domain.Failure
+		return err
+	}
 
-		return u.updateMessage(ctx, message, err)
+	if messageType == messageextractor.Extract {
+		extract, err := u.GetExtract(ctx, gmailService, message)
+		if err != nil {
+			u.log.Error(loggerModels.LogProperties{
+				Event: "download_attachments_failed",
+				Error: err,
+			})
+
+			return err
+		}
+
+		err = u.extractUsecase.Update(ctx, extract)
+		if err != nil {
+			u.log.Error(loggerModels.LogProperties{
+				Event: "update_extract_failed",
+				Error: err,
+			})
+
+			return err
+		}
+
+		mvmExtractor.SetExtract(extract)
 	}
 
 	movements, err := mvmExtractor.Extract()
@@ -225,23 +241,23 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, message *d
 			Error: err,
 		})
 
-		message.Status = domain.Failure
-
-		return u.updateMessage(ctx, message, err)
+		return err
 	}
 
 	for _, m := range movements {
 		m.AccountID = message.AccountID
 		m.MessageID = message.ID
 
-		err := u.movementRepo.CreateMovement(ctx, m)
+		err := u.mvmUsecase.CreateMovement(ctx, m)
 		if err != nil {
 			u.log.Error(loggerModels.LogProperties{
 				Event: "create_movement_failed",
 				Error: err,
 			})
 
-			message.Status = domain.Failure
+			if !errors.Is(err, movementsUsecase.ErrMustBeGreaterThanZero) {
+				message.Status = domain.Failure
+			}
 		}
 	}
 
@@ -249,11 +265,55 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, message *d
 		message.Status = domain.Success
 	}
 
-	return u.updateMessage(ctx, message, err)
+	return nil
+}
+
+func (u *messageUsecase) GetExtract(ctx context.Context, gmailService google.GmailAPI, message *domain.Message) (*extractsDomain.Extract, error) {
+	extract, err := u.extractUsecase.GetByMessageID(ctx, message.ID)
+	if err != nil {
+		if !errors.Is(err, extractsUsecase.ErrExtractNotFound) {
+			return nil, err
+		}
+	}
+
+	if extract != nil && (extract.Status == extractsDomain.ExtractStatusPending || extract.Status == extractsDomain.ExtractStatusProcessed) {
+		return extract, nil
+	}
+
+	if extract == nil {
+		extract = extractsDomain.NewExtract(message.AccountID, message.ID, "", "", 0, 0)
+
+		err := u.extractUsecase.Save(ctx, extract)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		err := u.mvmUsecase.DeleteMovementsByExtractID(ctx, extract.ID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	month, year, filePath, err := gmailService.DownloadAttachments(ctx, extract.AccountID, message.ExternalID)
+	if err != nil {
+		errUpdate := u.extractUsecase.Update(ctx, extract)
+		if errUpdate != nil {
+			return nil, errUpdate
+		}
+
+		return nil, err
+	}
+
+	extract.Month = month
+	extract.Year = year
+	extract.Path = filePath
+	extract.Status = extractsDomain.ExtractStatusPending
+
+	return extract, nil
 }
 
 // Review this
-func isMessageFiltered(msg *gmail.Message) (models.MessageType, bool) {
+func isMessageFiltered(msg *gmail.Message) (messageextractor.MessageType, bool) {
 	var from, subject string
 	if msg.Payload != nil && msg.Payload.Headers != nil {
 		for _, header := range msg.Payload.Headers {
@@ -267,14 +327,14 @@ func isMessageFiltered(msg *gmail.Message) (models.MessageType, bool) {
 		}
 	}
 
-	messageType := models.Unknown
+	messageType := messageextractor.Unknown
 
 	if strings.Contains(strings.ToLower(subject), "extractos") {
-		messageType = models.Extract
+		messageType = messageextractor.Extract
 	}
 
 	if strings.ToLower(subject) == "davivienda" {
-		messageType = models.Movement
+		messageType = messageextractor.Movement
 	}
 
 	for _, filter := range emailFilters {
@@ -298,4 +358,50 @@ func (u *messageUsecase) updateMessage(ctx context.Context, message *domain.Mess
 	}
 
 	return message, err
+}
+
+func (u *messageUsecase) GetMessageIDsByNotificationID(ctx context.Context, historyID uint64, account *accountsDomain.Account) ([]string, error) {
+	client := u.googleClient.Client(ctx, account.GoogleAccount)
+
+	gmailService, err := google.NewGmailClient(ctx, client)
+	if err != nil {
+		return nil, err
+	}
+
+	messages, err := gmailService.GetMessagesByHistory(ctx, historyID)
+	if err != nil {
+		if errors.Is(err, google.ErrHistoryNotFound) {
+			return []string{}, nil
+		}
+
+		return nil, err
+	}
+
+	messageIDs := []string{}
+
+	for _, m := range messages {
+		messageIDs = append(messageIDs, m.Id)
+	}
+
+	return messageIDs, nil
+}
+
+func (u *messageUsecase) ProcessByNotification(ctx context.Context, account *accountsDomain.Account, historyID uint64) ([]*domain.Message, error) {
+	messages, err := u.GetMessageIDsByNotificationID(ctx, historyID, account)
+	if err != nil {
+		return nil, err
+	}
+
+	processedMessages := []*domain.Message{}
+
+	for _, msgID := range messages {
+		msg, err := u.Process(ctx, fmt.Sprintf("%d", historyID), msgID, account)
+		if err != nil {
+			return nil, err
+		}
+
+		processedMessages = append(processedMessages, msg)
+	}
+
+	return processedMessages, nil
 }

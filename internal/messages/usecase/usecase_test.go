@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/api/gmail/v1"
 
-	"transaction-tracker/api/services/gmail/models"
 	accountsDomain "transaction-tracker/internal/accounts/domain"
+	messageextractor "transaction-tracker/pkg/message-extractor"
 )
 
 func TestIsMessageFiltered(t *testing.T) {
@@ -17,7 +17,7 @@ func TestIsMessageFiltered(t *testing.T) {
 	tests := []struct {
 		name       string
 		headers    []*gmail.MessagePartHeader
-		wantType   models.MessageType
+		wantType   messageextractor.MessageType
 		wantFilter bool
 	}{
 		{
@@ -26,7 +26,7 @@ func TestIsMessageFiltered(t *testing.T) {
 				{Name: "From", Value: "banco_davivienda@davivienda.com"},
 				{Name: "Subject", Value: "Davivienda"},
 			},
-			wantType:   models.Movement,
+			wantType:   messageextractor.Movement,
 			wantFilter: true,
 		},
 		{
@@ -35,7 +35,7 @@ func TestIsMessageFiltered(t *testing.T) {
 				{Name: "From", Value: "bancodavivienda@davivienda.com"},
 				{Name: "Subject", Value: "Extractos Septiembre"},
 			},
-			wantType:   models.Extract,
+			wantType:   messageextractor.Extract,
 			wantFilter: true,
 		},
 		{
@@ -44,7 +44,7 @@ func TestIsMessageFiltered(t *testing.T) {
 				{Name: "From", Value: "otro@banco.com"},
 				{Name: "Subject", Value: "Notificación"},
 			},
-			wantType:   models.Unknown,
+			wantType:   messageextractor.Unknown,
 			wantFilter: false,
 		},
 	}
