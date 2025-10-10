@@ -79,16 +79,10 @@ func (a *accountsUseCase) GetOrCreateAccountByEmail(ctx context.Context, email s
 
 // SaveGoogleAccount exchanges the authorization code for a token, retrieves the user's email, and saves the Google account information.
 func (a *accountsUseCase) SaveGoogleAccount(ctx context.Context, code string) (*domain.Account, error) {
-	token, err := a.googleClient.Config().Exchange(ctx, code)
+	googleAccount, err := a.googleClient.SaveTokenAndInitServices(ctx, code)
 	if err != nil {
 		return nil, err
 	}
-
-	googleAccount := &google.GoogleAccount{
-		Token: token,
-	}
-
-	a.googleClient.SetToken(token)
 
 	email, err := a.googleClient.GetUserEmail(ctx)
 	if err != nil {
@@ -178,7 +172,7 @@ func (a *accountsUseCase) CreateWatcher(ctx context.Context, account *domain.Acc
 	projectID := "transaction-tracker-2473"
 	topicName := fmt.Sprintf("projects/%s/topics/gmail-notifications", projectID)
 
-	gmailClient, err := google.NewGmailClient(ctx, a.googleClient.Config().Client(ctx, account.GoogleAccount.Token))
+	gmailClient, err := google.NewGmailClient(ctx, a.googleClient.Client(ctx, account.GoogleAccount))
 	if err != nil {
 		return err
 	}
@@ -195,7 +189,7 @@ func (a *accountsUseCase) CreateWatcher(ctx context.Context, account *domain.Acc
 
 // DeleteWatcher deletes the Gmail watcher for the provided account.
 func (a *accountsUseCase) DeleteWatcher(ctx context.Context, account *domain.Account) error {
-	gmailClient, err := google.NewGmailClient(ctx, a.googleClient.Config().Client(ctx, account.GoogleAccount.Token))
+	gmailClient, err := google.NewGmailClient(ctx, a.googleClient.Client(ctx, account.GoogleAccount))
 	if err != nil {
 		return err
 	}

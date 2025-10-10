@@ -27,6 +27,7 @@ func (m *MockAccountsRepository) CreateAccount(ctx context.Context, account *dom
 	if m.CreateAccountFn != nil {
 		return m.CreateAccountFn(ctx, account)
 	}
+
 	return nil
 }
 
@@ -34,6 +35,7 @@ func (m *MockAccountsRepository) GetAccount(ctx context.Context, id string) (*do
 	if m.GetAccountFn != nil {
 		return m.GetAccountFn(ctx, id)
 	}
+
 	return nil, nil
 }
 
@@ -41,6 +43,7 @@ func (m *MockAccountsRepository) GetAccountByEmail(ctx context.Context, email st
 	if m.GetAccountByEmailFn != nil {
 		return m.GetAccountByEmailFn(ctx, email)
 	}
+
 	return nil, nil
 }
 
@@ -48,6 +51,7 @@ func (m *MockAccountsRepository) SaveGoogleAccount(ctx context.Context, accountI
 	if m.SaveGoogleAccountFn != nil {
 		return m.SaveGoogleAccountFn(ctx, accountID, ga)
 	}
+
 	return nil
 }
 
@@ -55,6 +59,7 @@ func (m *MockAccountsRepository) UpdateAccount(ctx context.Context, account *dom
 	if m.UpdateAccountFn != nil {
 		return m.UpdateAccountFn(ctx, account)
 	}
+
 	return nil
 }
 
@@ -62,6 +67,7 @@ func (m *MockAccountsRepository) DeleteWatcher(ctx context.Context, accountID st
 	if m.DeleteWatcherFn != nil {
 		return m.DeleteWatcherFn(ctx, accountID)
 	}
+
 	return nil
 }
 
@@ -69,6 +75,7 @@ func (m *MockAccountsRepository) CreateWatcher(ctx context.Context, accountID st
 	if m.CreateWatcherFn != nil {
 		return m.CreateWatcherFn(ctx, accountID)
 	}
+
 	return nil
 }
 
@@ -76,5 +83,6 @@ func (m *MockAccountsRepository) RefreshGoogleToken(ctx context.Context, account
 	if m.RefreshGoogleTokenFn != nil {
 		return m.RefreshGoogleTokenFn(ctx, accountID)
 	}
+
 	return nil
 }
