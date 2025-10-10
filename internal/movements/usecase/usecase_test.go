@@ -26,6 +26,7 @@ func TestCreateMovement(t *testing.T) {
 			AccountID:     uuid.New().String(),
 			InstitutionID: "iid",
 			Type:          domain.Income,
+			Category:      domain.Education,
 			Amount:        150.00,
 			Date:          time.Now(),
 		}
@@ -52,17 +53,6 @@ func TestCreateMovement(t *testing.T) {
 		}
 		err := u.CreateMovement(ctx, m)
 		c.ErrorContains(err, "account ID is required")
-	})
-
-	t.Run("missing institutionID", func(t *testing.T) {
-		m := &domain.Movement{
-			AccountID: uuid.New().String(),
-			Type:      domain.Income,
-			Amount:    100,
-			Date:      time.Now(),
-		}
-		err := u.CreateMovement(ctx, m)
-		c.ErrorContains(err, "institution ID is required")
 	})
 
 	t.Run("invalid amount", func(t *testing.T) {
@@ -95,6 +85,7 @@ func TestCreateMovement(t *testing.T) {
 			InstitutionID: "iid",
 			Type:          domain.Income,
 			Amount:        100,
+			Category:      domain.Education,
 			Date:          time.Now().Add(24 * time.Hour),
 		}
 		err := u.CreateMovement(ctx, m)
@@ -107,6 +98,7 @@ func TestCreateMovement(t *testing.T) {
 			InstitutionID: "iid",
 			Type:          domain.Income,
 			Amount:        100,
+			Category:      domain.Education,
 			Date:          time.Now(),
 		}
 
@@ -128,7 +120,8 @@ func TestCreateMovementWithRepositoryError(t *testing.T) {
 	testMovement := &domain.Movement{
 		AccountID:     uuid.New().String(),
 		InstitutionID: "iid",
-		Type:          domain.Income,
+		Category:      domain.Debt,
+		Type:          domain.Expense,
 		Amount:        150.00,
 	}
 

@@ -13,7 +13,7 @@ func TestNewMovement(t *testing.T) {
 	testAccountID := "acc-123"
 	testInstitutionID := "inst-456"
 	testMessageID := "mid123"
-	testNotificationID := "nid1"
+	testExtractID := "eid123"
 	testDescription := "Test transaction"
 	testAmount := 125.75
 	testMovementType := Income
@@ -25,7 +25,7 @@ func TestNewMovement(t *testing.T) {
 		testAccountID,
 		testInstitutionID,
 		testMessageID,
-		testNotificationID,
+		testExtractID,
 		testDescription,
 		testAmount,
 		testCategory,

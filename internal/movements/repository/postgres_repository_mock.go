@@ -47,3 +47,15 @@ func (m *MockMovementRepository) GetTotalMovementsByAccountID(ctx context.Contex
 
 	return args.Get(0).(int), args.Error(1)
 }
+
+// Delete simulates deleting a movement.
+func (m *MockMovementRepository) Delete(ctx context.Context, id string, accountID string) error {
+	args := m.Called(ctx, id, accountID)
+	return args.Error(0)
+}
+
+// DeleteMovementsByExtractID simulates deleting movements by extract ID.
+func (m *MockMovementRepository) DeleteMovementsByExtractID(ctx context.Context, extractID string) error {
+	args := m.Called(ctx, extractID)
+	return args.Error(0)
+}

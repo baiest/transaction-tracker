@@ -64,21 +64,28 @@ const (
 	Unknown MovementCategory = "unknown"
 )
 
+var (
+	// ErrInvalidMovementType
+	ErrInvalidMovementType = errors.New("invalid movement type")
+	// ErrInvalidSource
+	ErrInvalidMovementCategory = errors.New("invalid movement category")
+)
+
 // Movement represents a single financial transaction. It's the central business entity.
 type Movement struct {
-	ID             string           `json:"id" bson:"_id,omitempty"`
-	AccountID      string           `json:"account_id" bson:"account_id"`
-	InstitutionID  string           `json:"institution_id" bson:"institution_id"`
-	MessageID      string           `json:"message_id" bson:"message_id"`
-	NotificationID string           `json:"notification_id" bson:"notification_id"`
-	Description    string           `json:"description" bson:"description"`
-	Amount         float64          `json:"amount" bson:"amount"`
-	Type           MovementType     `json:"type" bson:"type"`
-	Date           time.Time        `json:"date" bson:"date"`
-	Source         Source           `json:"source" bson:"source"`
-	Category       MovementCategory `json:"category" bson:"category"`
-	CreatedAt      time.Time        `json:"created_at" bson:"created_at"`
-	UpdatedAt      time.Time        `json:"updated_at" bson:"updated_at"`
+	ID            string           `json:"id" bson:"_id,omitempty"`
+	AccountID     string           `json:"account_id" bson:"account_id"`
+	InstitutionID string           `json:"institution_id" bson:"institution_id"`
+	MessageID     string           `json:"message_id" bson:"message_id"`
+	ExtractID     string           `json:"extract_id" bson:"extract_id"`
+	Description   string           `json:"description" bson:"description"`
+	Amount        float64          `json:"amount" bson:"amount"`
+	Type          MovementType     `json:"type" bson:"type"`
+	Date          time.Time        `json:"date" bson:"date"`
+	Source        Source           `json:"source" bson:"source"`
+	Category      MovementCategory `json:"category" bson:"category"`
+	CreatedAt     time.Time        `json:"created_at" bson:"created_at"`
+	UpdatedAt     time.Time        `json:"updated_at" bson:"updated_at"`
 }
 
 // PaginatedMovements is the structure that encapsulates paginated movements and pagination information.
@@ -92,19 +99,19 @@ type PaginatedMovements struct {
 }
 
 // NewMovement creates an instece of Movement.
-func NewMovement(accountID string, institutionID string, messageID string, notificationID string, description string, amount float64, category MovementCategory, movementType MovementType, date time.Time, source Source) *Movement {
+func NewMovement(accountID string, institutionID string, messageID string, extractID string, description string, amount float64, category MovementCategory, movementType MovementType, date time.Time, source Source) *Movement {
 	return &Movement{
-		ID:             _movement_prefix + strings.ReplaceAll(uuid.New().String(), "-", ""),
-		AccountID:      accountID,
-		InstitutionID:  institutionID,
-		MessageID:      messageID,
-		NotificationID: notificationID,
-		Description:    description,
-		Amount:         amount,
-		Category:       category,
-		Type:           movementType,
-		Date:           date,
-		Source:         source,
+		ID:            _movement_prefix + strings.ReplaceAll(uuid.New().String(), "-", ""),
+		AccountID:     accountID,
+		InstitutionID: institutionID,
+		MessageID:     messageID,
+		ExtractID:     extractID,
+		Description:   description,
+		Amount:        amount,
+		Category:      category,
+		Type:          movementType,
+		Date:          date,
+		Source:        source,
 	}
 }
 
@@ -115,6 +122,15 @@ func ParseMovementType(t string) (MovementType, error) {
 	case Income, Expense:
 		return MovementType(t), nil
 	default:
-		return "", errors.New("invalid movement type")
+		return "", ErrInvalidMovementType
+	}
+}
+
+func ParseMovementCategory(t string) (MovementCategory, error) {
+	switch MovementCategory(t) {
+	case Unknown, Salary, Freelance, Investment, Housing, Transport, Food, Entertainment, Shopping, Health, Education, Travel, Savings, Debt:
+		return MovementCategory(t), nil
+	default:
+		return "", ErrInvalidMovementCategory
 	}
 }

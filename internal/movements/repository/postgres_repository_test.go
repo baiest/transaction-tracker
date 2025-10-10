@@ -42,19 +42,18 @@ func TestCreateMovement(t *testing.T) {
 	now := time.Now()
 
 	movement := &domain.Movement{
-		ID:             uuid.New().String(),
-		AccountID:      "acc1",
-		InstitutionID:  "inst1",
-		MessageID:      "mid1",
-		NotificationID: "nid1",
-		Description:    "Test Description",
-		Amount:         1000.0,
-		Type:           "expense",
-		Date:           now,
-		Source:         "card",
-		Category:       "groceries",
-		CreatedAt:      fixedTime,
-		UpdatedAt:      fixedTime,
+		ID:            uuid.New().String(),
+		AccountID:     "acc1",
+		InstitutionID: "inst1",
+		MessageID:     "mid1",
+		Description:   "Test Description",
+		Amount:        1000.0,
+		Type:          "expense",
+		Date:          now,
+		Source:        "card",
+		Category:      "groceries",
+		CreatedAt:     fixedTime,
+		UpdatedAt:     fixedTime,
 	}
 
 	mock.ExpectExec(`INSERT INTO movements`).
@@ -63,7 +62,6 @@ func TestCreateMovement(t *testing.T) {
 			movement.AccountID,
 			movement.InstitutionID,
 			movement.MessageID,
-			movement.NotificationID,
 			movement.Description,
 			movement.Amount,
 			movement.Type,
@@ -89,16 +87,15 @@ func TestGetMovementByID(t *testing.T) {
 	now := time.Now()
 	instID := "inst1"
 	messaID := "mid1"
-	notiID := "nid1"
 	desc := "Test Desc"
 	amount := float64(1000.0)
 	date := now
 	source := "card"
 	cat := "groceries"
 
-	columns := []string{"id", "account_id", "institution_id", "message_id", "notification_id", "description", "amount", "type", "date", "source", "category", "created_at", "updated_at"}
+	columns := []string{"id", "account_id", "institution_id", "message_id", "description", "amount", "type", "date", "source", "category", "created_at", "updated_at"}
 	rows := pgxmock.NewRows(columns).
-		AddRow("mov1", "acc1", &instID, &notiID, &messaID, &desc, amount, "expense", &date, &source, cat, &now, &now)
+		AddRow("mov1", "acc1", &instID, &messaID, &desc, amount, "expense", &date, &source, cat, &now, &now)
 
 	mock.ExpectQuery(`SELECT (.+) FROM movements WHERE id = \$1 AND account_id = \$2`).
 		WithArgs("mov1", "acc1").
