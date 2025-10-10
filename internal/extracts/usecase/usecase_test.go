@@ -60,16 +60,16 @@ func TestGetExtractMessages_Success(t *testing.T) {
 		},
 	}
 
-	mockGmail := new(google.MockGmailService)
-	mockGmail.On("GetExtractMessages", context.Background(), "SomeBank").Return(msgs, nil)
-
-	mockGoogle := new(google.MockGoogleClient)
-	mockGoogle.On("GmailService", context.Background(), &google.GoogleAccount{}).Return(mockGmail, nil)
-
 	account := &accountsDomain.Account{
 		ID:            "acc-1",
 		GoogleAccount: &google.GoogleAccount{},
 	}
+
+	mockGmail := new(google.MockGmailService)
+	mockGmail.On("GetExtractMessages", context.Background(), "SomeBank").Return(msgs, nil)
+
+	mockGoogle := new(google.MockGoogleClient)
+	mockGoogle.On("GmailService", context.Background(), account.GoogleAccount).Return(mockGmail, nil)
 
 	mockRepo := new(repository.MockExtractsRepository)
 	mockRepo.On("Save", context.Background(), &domain.Extract{}).Return(nil)
