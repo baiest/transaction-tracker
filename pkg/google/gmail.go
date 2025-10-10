@@ -38,6 +38,8 @@ var (
 	ErrMissingHistoryID = errors.New("missing historyID")
 	// ErrMessageNotFound is returned when a message is not found.
 	ErrMessageNotFound = errors.New("message not found")
+	// ErrHistoryNotFounf is returned when history no found or not has messages
+	ErrHistoryNotFound = errors.New("history not found")
 
 	extractsFolder = "files/%s/extracts"
 )
@@ -177,4 +179,37 @@ func (g *gmailService) DownloadAttachments(ctx context.Context, accountID string
 	}
 
 	return 0, 0, "", errors.New("no attachment found")
+}
+
+func (g *gmailService) GetMessagesByHistory(_ context.Context, historyID uint64) ([]*gmail.Message, error) {
+	historyListCall := g.Client.Users.History.List("me").StartHistoryId(historyID)
+
+	historyList, err := historyListCall.Do()
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil, ErrHistoryNotFound
+		}
+
+		return nil, err
+	}
+
+	if len(historyList.History) == 0 {
+		return nil, ErrHistoryNotFound
+	}
+
+	messageIDs := map[string]bool{}
+	messages := []*gmail.Message{}
+
+	for _, h := range historyList.History {
+		for _, m := range h.Messages {
+			if messageIDs[m.Id] {
+				continue
+			}
+
+			messageIDs[m.Id] = true
+			messages = append(messages, m)
+		}
+	}
+
+	return messages, nil
 }

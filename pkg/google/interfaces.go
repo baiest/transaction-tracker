@@ -2,6 +2,7 @@ package google
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -17,7 +18,7 @@ type GoogleClientAPI interface {
 	GetUserEmail(ctx context.Context) (string, error)
 	GmailService(ctx context.Context, googleAccount *GoogleAccount) (GmailAPI, error)
 	RefreshToken(ctx context.Context, googleAccount *GoogleAccount) (*oauth2.Token, error)
-	Config() *oauth2.Config
+	Client(ctx context.Context, googleAccount *GoogleAccount) *http.Client
 }
 
 // GmailAPI defines the interface for GmailService.
@@ -28,6 +29,7 @@ type GmailAPI interface {
 	GetMessageAttachment(ctx context.Context, messageID string, attachmentID string) (*gmail.MessagePartBody, error)
 	GetExtractMessages(ctx context.Context, bankName string) (*gmail.ListMessagesResponse, error)
 	DownloadAttachments(ctx context.Context, accountID string, messageID string) (time.Month, int, string, error)
+	GetMessagesByHistory(ctx context.Context, historyID uint64) ([]*gmail.Message, error)
 }
 
 // PubSubAPI defines the interface for GooglePubSub.

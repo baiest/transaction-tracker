@@ -3,6 +3,7 @@ package google
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -131,7 +132,6 @@ func (g *googleClient) RefreshToken(ctx context.Context, googleAccount *GoogleAc
 	return newToken, nil
 }
 
-// Client returns the HTTP client associated with the googleClient.
-func (g *googleClient) Config() *oauth2.Config {
-	return g.config
+func (g *googleClient) Client(ctx context.Context, googleAccount *GoogleAccount) *http.Client {
+	return g.config.Client(ctx, googleAccount.Token)
 }

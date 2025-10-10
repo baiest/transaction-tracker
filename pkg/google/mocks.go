@@ -2,6 +2,7 @@ package google
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	pubsub "cloud.google.com/go/pubsub"
@@ -36,6 +37,10 @@ func (m *MockGoogleClient) GetUserEmail(ctx context.Context) (string, error) {
 
 func (m *MockGoogleClient) GmailService(ctx context.Context, googleAccount *GoogleAccount) (GmailAPI, error) {
 	args := m.Called(ctx, googleAccount)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
 	return args.Get(0).(GmailAPI), args.Error(1)
 }
 
@@ -44,9 +49,9 @@ func (m *MockGoogleClient) RefreshToken(ctx context.Context, googleAccount *Goog
 	return args.Get(0).(*oauth2.Token), args.Error(1)
 }
 
-func (m *MockGoogleClient) Config() *oauth2.Config {
+func (m *MockGoogleClient) Client(ctx context.Context, googleAccount *GoogleAccount) *http.Client {
 	args := m.Called()
-	return args.Get(0).(*oauth2.Config)
+	return args.Get(0).(*http.Client)
 }
 
 // MockGmailService is a mock of GmailAPI
@@ -76,7 +81,20 @@ func (m *MockGmailService) GetMessageAttachment(ctx context.Context, messageID s
 
 func (m *MockGmailService) GetExtractMessages(ctx context.Context, bankName string) (*gmail.ListMessagesResponse, error) {
 	args := m.Called(ctx, bankName)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
 	return args.Get(0).(*gmail.ListMessagesResponse), args.Error(1)
+}
+
+func (m *MockGmailService) GetMessagesByHistory(ctx context.Context, historyID uint64) ([]*gmail.Message, error) {
+	args := m.Called(ctx, historyID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+
+	return args.Get(0).([]*gmail.Message), args.Error(1)
 }
 
 func (m *MockGmailService) DownloadAttachments(ctx context.Context, accountID string, messageID string) (time.Month, int, string, error) {
