@@ -3,6 +3,7 @@ package handler
 import (
 	"transaction-tracker/api/models"
 	"transaction-tracker/internal/accounts/usecase"
+	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 
 	"github.com/gin-gonic/gin"
@@ -11,11 +12,11 @@ import (
 
 // AccountHandler handles HTTP requests for the accounts domain.
 type AccountHandler struct {
-	accountsUsecase usecase.AccountsUseCase
+	accountsUsecase usecase.AccountsUsecase
 }
 
 // NewAccountHandler creates a new instance of AccountsHandler.
-func NewAccountHandler(ucm usecase.AccountsUseCase) *AccountHandler {
+func NewAccountHandler(ucm usecase.AccountsUsecase) *AccountHandler {
 	return &AccountHandler{
 		accountsUsecase: ucm,
 	}
@@ -37,29 +38,28 @@ func (h *AccountHandler) SaveLogin(c *gin.Context) {
 
 	log := l.(*loggerModels.Logger)
 
-	email := c.Query("email")
-
-	account, err := h.accountsUsecase.GetOrCreateAccountByEmail(c.Request.Context(), email)
-	if err != nil {
-		log.Error(loggerModels.LogProperties{
-			Event: "get_or_create_account_failed",
-			Error: err,
-		})
-
-		models.NewResponseInternalServerError(c)
-		return
-	}
-
 	code := c.Query("code")
 	if code == "" {
 		models.NewResponseInvalidRequest(c, models.Response{Message: "code is required"})
 		return
 	}
 
-	err = h.accountsUsecase.SaveGoogleAccount(c.Request.Context(), account.ID, code)
+	account, err := h.accountsUsecase.SaveGoogleAccount(c.Request.Context(), code)
 	if err != nil {
 		log.Error(loggerModels.LogProperties{
 			Event: "save_token_failed",
+			Error: err,
+		})
+
+		models.NewResponseInternalServerError(c)
+
+		return
+	}
+
+	err = h.accountsUsecase.UpdateAccount(c.Request.Context(), account)
+	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "update_account_failed",
 			Error: err,
 		})
 
@@ -86,16 +86,25 @@ func (h *AccountHandler) SaveLogin(c *gin.Context) {
 }
 
 func (h *AccountHandler) Refresh(c *gin.Context) {
-	log, account, err := getContextDependencies(c)
-	if err != nil {
+	l, ok := c.Get("logger")
+	if !ok {
+		models.NewResponseInternalServerError(c)
 		return
 	}
 
+	log := l.(*loggerModels.Logger)
+
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "missing_refresh_token",
+			Error: err,
+		})
+
 		models.NewResponseUnauthorized(c, models.Response{
 			Message: "missing refresh token",
 		})
+
 		return
 	}
 
@@ -123,6 +132,35 @@ func (h *AccountHandler) Refresh(c *gin.Context) {
 		return
 	}
 
+	account, err := h.accountsUsecase.GetAccount(c.Request.Context(), id)
+	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "get_account_failed",
+			Error: err,
+			AdditionalParams: []loggerModels.Properties{
+				logger.MapToProperties(map[string]string{
+					"id": id,
+				}),
+			},
+		})
+
+		models.NewResponseInternalServerError(c)
+
+		return
+	}
+
+	err = h.accountsUsecase.RefreshGoogleToken(c.Request.Context(), account)
+	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "refresh_google_token_failed",
+			Error: err,
+		})
+
+		models.NewResponseInternalServerError(c)
+
+		return
+	}
+
 	newToken, newRefreshToken, _, err := h.accountsUsecase.GenerateTokens(c.Request.Context(), account)
 	if err != nil {
 		log.Error(loggerModels.LogProperties{
@@ -137,6 +175,10 @@ func (h *AccountHandler) Refresh(c *gin.Context) {
 
 	c.SetCookie("token", newToken, 3600, "/", "localhost", false, true)
 	c.SetCookie("refresh_token", newRefreshToken, 604800, "/", "localhost", false, true)
+
+	models.NewResponseOK(c, models.Response{
+		Message: "tokens refreshed successfully",
+	})
 }
 
 func (h *AccountHandler) CreateWatcher(c *gin.Context) {

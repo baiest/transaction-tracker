@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"transaction-tracker/internal/messages/usecase"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,12 +19,9 @@ func TestGetMessage_Success(t *testing.T) {
 	c := require.New(t)
 
 	messageID := "MID123"
-
-	mockUsecase := &usecase.MockMessageUsecase{
-		GetMessageByIDAndAccountIDFunc: func(ctx context.Context, id, accountID string) (*domain.Message, error) {
-			return &domain.Message{ID: messageID}, nil
-		},
-	}
+	mockUsecase := new(usecase.MockMessageUsecase)
+	mockUsecase.On("GetMessageByIDAndAccountID", mock.Anything, messageID, mock.Anything).Return(&domain.Message{ID: messageID}, nil)
+	mockUsecase.On("GetMessage", mock.Anything, messageID, mock.Anything).Return(&domain.Message{ID: messageID}, nil)
 
 	testHandler := NewMessageHandler(mockUsecase)
 
@@ -47,11 +44,9 @@ func TestGetMessage_Success(t *testing.T) {
 func TestGetMesage_UsecaseError(t *testing.T) {
 	c := require.New(t)
 
-	mockUsecase := &usecase.MockMessageUsecase{
-		GetMessageByIDAndAccountIDFunc: func(ctx context.Context, id, accountID string) (*domain.Message, error) {
-			return nil, errors.New("database connection failed")
-		},
-	}
+	mockUsecase := new(usecase.MockMessageUsecase)
+	mockUsecase.On("GetMessageByIDAndAccountID", mock.Anything, "MID123", mock.Anything).Return(nil, errors.New("database connection failed"))
+	mockUsecase.On("GetMessage", mock.Anything, "MID123", mock.Anything).Return(nil, errors.New("database connection failed"))
 
 	testHandler := NewMessageHandler(mockUsecase)
 

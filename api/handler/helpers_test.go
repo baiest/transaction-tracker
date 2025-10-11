@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"transaction-tracker/api/services/accounts"
+	accountsDomain "transaction-tracker/internal/accounts/domain"
 	"transaction-tracker/logger"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +24,7 @@ func setupTestContext(method, target string, body io.Reader) (*gin.Context, *htt
 	mockLogger, _ := logger.GetLogger(c, "test")
 	c.Set("logger", mockLogger)
 
-	c.Set("account", &accounts.Account{ID: "accountID"})
+	c.Set("account", &accountsDomain.Account{ID: "accountID"})
 
 	return c, w
 }
@@ -60,7 +60,7 @@ func TestGetContextDependencies(t *testing.T) {
 
 		logger, err := logger.GetLogger(ctx, "test")
 		c.NoError(err)
-		account := &accounts.Account{ID: "acc123"}
+		account := &accountsDomain.Account{ID: "acc123"}
 
 		ctx.Set("logger", logger)
 		ctx.Set("account", account)

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"strconv"
 	"transaction-tracker/api/models"
 	"transaction-tracker/internal/messages/repository"
 	"transaction-tracker/internal/messages/usecase"
@@ -35,7 +36,7 @@ func (h *MessageHandler) GetMessageByID(c *gin.Context) {
 		return
 	}
 
-	message, err := h.messageUsecase.GetMessageByIDAndAccountID(c.Request.Context(), id, account.ID)
+	message, err := h.messageUsecase.GetMessage(c.Request.Context(), id, account.ID)
 	if err != nil {
 		if errors.Is(err, repository.ErrMessageNotFound) {
 			models.NewResponseNotFound(c, models.Response{Message: "message not found"})
@@ -87,5 +88,49 @@ func (h *MessageHandler) ProcessMessage(c *gin.Context) {
 
 	models.NewResponseOK(c, models.Response{
 		Data: models.ToMessageResponse(message),
+	})
+}
+
+func (h *MessageHandler) GetMessagesByHistory(c *gin.Context) {
+	log, account, err := getContextDependencies(c)
+	if err != nil {
+		return
+	}
+
+	historyStr := c.Param("id")
+	if historyStr == "" {
+		log.Error(loggerModels.LogProperties{
+			Event: "invalid_history_id",
+			Error: err,
+		})
+
+		models.NewResponseInvalidRequest(c, models.Response{Message: "invalid history id"})
+		return
+	}
+
+	history, err := strconv.Atoi(historyStr)
+	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "invalid_history_id",
+			Error: err,
+		})
+
+		models.NewResponseInvalidRequest(c, models.Response{Message: "invalid history id"})
+		return
+	}
+
+	messages, err := h.messageUsecase.GetMessageIDsByNotificationID(c.Request.Context(), uint64(history), account)
+	if err != nil {
+		log.Error(loggerModels.LogProperties{
+			Event: "get_messages_by_history_failed",
+			Error: err,
+		})
+
+		models.NewResponseInternalServerError(c)
+		return
+	}
+
+	models.NewResponseOK(c, models.Response{
+		Data: messages,
 	})
 }
