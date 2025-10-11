@@ -8,6 +8,8 @@ import (
 	"transaction-tracker/api/routes"
 	accountRepository "transaction-tracker/internal/accounts/repository"
 	accountUsecase "transaction-tracker/internal/accounts/usecase"
+	extractRepostory "transaction-tracker/internal/extracts/repository"
+	extractUsecase "transaction-tracker/internal/extracts/usecase"
 	messageRepository "transaction-tracker/internal/messages/repository"
 	messageUsecase "transaction-tracker/internal/messages/usecase"
 	movementRepostiroy "transaction-tracker/internal/movements/repository"
@@ -31,7 +33,7 @@ func main() {
 
 	defer dbClient.Close()
 
-	client, err := mongo.NewClient(ctx)
+	ctx, client, err := mongo.NewClient(ctx)
 	if err != nil {
 		log.Fatal("Unable to create mongo database client:", err)
 	}
@@ -46,11 +48,14 @@ func main() {
 		log.Fatal("Unable to get account collection:", err)
 	}
 
+	extractCollection, err := client.Collection(mongo.TRANSACTIONS, mongo.EXTRACTS)
+	if err != nil {
+		log.Fatal("Unable to get account collection:", err)
+	}
+
 	movementRepo := movementRepostiroy.NewPostgresRepository(dbClient.GetPool())
 	movementUsecase := movementUsecase.NewMovementUsecase(movementRepo)
 	movementHandler := handler.NewMovementHandler(movementUsecase)
-
-	messageRepo := messageRepository.NewMessageRepository(messageCollection)
 
 	logger, err := logger.GetLogger(ctx, "messages-usecase")
 	if err != nil {
@@ -62,24 +67,26 @@ func main() {
 		log.Fatal("Unable to create google client:", err)
 	}
 
-	gmailClient, err := google.NewGmailClient(ctx, googleClient)
-	if err != nil {
-		log.Fatal("Unable to create gmail client:", err)
-	}
+	extractRepo := extractRepostory.NewExtractsRepository(extractCollection)
+	extractUsecase := extractUsecase.NewExtractsUsecase(googleClient, extractRepo)
 
-	messageUsecase := messageUsecase.NewMessageUsecase(ctx, logger, googleClient, messageRepo, movementRepo)
+	messageRepo := messageRepository.NewMessageRepository(messageCollection)
+	messageUsecase := messageUsecase.NewMessageUsecase(ctx, logger, googleClient, messageRepo, movementUsecase, extractUsecase)
 	messageHandler := handler.NewMessageHandler(messageUsecase)
 
+	extractHandler := handler.NewExtractsHandler(extractUsecase, messageUsecase)
+
 	accountRepo := accountRepository.NewAccountsRepository(accountCollection)
-	accountUsecase := accountUsecase.NewAccountsUseCase(googleClient, gmailClient, accountRepo)
+	accountUsecase := accountUsecase.NewAccountsUseCase(googleClient, accountRepo)
 	accountHandler := handler.NewAccountHandler(accountUsecase)
 
 	s := models.NewServer(accountUsecase, 8080)
 
 	routerHandler := &routes.RouteHandler{
 		AccountHandler:  accountHandler,
-		MovementHandler: movementHandler,
 		MessageHandler:  messageHandler,
+		ExtractHandler:  extractHandler,
+		MovementHandler: movementHandler,
 	}
 
 	s.AddRoutes(routerHandler.Routes())
