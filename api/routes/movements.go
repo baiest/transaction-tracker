@@ -3,7 +3,6 @@ package routes
 import (
 	"transaction-tracker/api/handler"
 	"transaction-tracker/api/models"
-	services "transaction-tracker/api/services/movements"
 )
 
 func MovementsRoutes(h *handler.MovementHandler) []models.Route {
@@ -27,21 +26,21 @@ func MovementsRoutes(h *handler.MovementHandler) []models.Route {
 			ApiVersion:  API_VERSION,
 		},
 		{
-			Endpoint:    "/movements/:movementID",
+			Endpoint:    "/movements/:id",
 			Method:      models.DELETE,
-			HandlerFunc: services.DeleteMovement(),
+			HandlerFunc: h.DeleteMovement,
 			ApiVersion:  API_VERSION,
 		},
 		{
 			Endpoint:    "/movements/years/:year",
 			Method:      models.GET,
-			HandlerFunc: services.GetMovementsByYear(),
+			HandlerFunc: h.GetMovementsByYear,
 			ApiVersion:  API_VERSION,
 		},
 		{
 			Endpoint:    "/movements/years/:year/months/:month",
 			Method:      models.GET,
-			HandlerFunc: services.GetMovementsByMonth(),
+			HandlerFunc: h.GetMovementsByMonth,
 			ApiVersion:  API_VERSION,
 		},
 	}

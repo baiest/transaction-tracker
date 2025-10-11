@@ -19,5 +19,11 @@ func MessagesRoutes(h *handler.MessageHandler) []models.Route {
 			HandlerFunc: h.GetMessageByID,
 			ApiVersion:  API_VERSION,
 		},
+		{
+			Method:      models.GET,
+			Endpoint:    "/messages/history/:id",
+			HandlerFunc: h.GetMessagesByHistory,
+			ApiVersion:  API_VERSION,
+		},
 	}
 }
