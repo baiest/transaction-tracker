@@ -3,7 +3,6 @@ package models
 import (
 	"fmt"
 	"runtime/debug"
-	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/internal/accounts/usecase"
 	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
@@ -15,11 +14,11 @@ import (
 
 type Server struct {
 	Port           string
-	accountUsecase usecase.AccountsUseCase
+	accountUsecase usecase.AccountsUsecase
 	engine         *gin.Engine
 }
 
-func NewServer(accountUsecase usecase.AccountsUseCase, port int) *Server {
+func NewServer(accountUsecase usecase.AccountsUsecase, port int) *Server {
 	engine := gin.Default()
 
 	engine.Use(InitLogger())
@@ -52,7 +51,7 @@ func (s *Server) AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		token, err := accounts.VerifyToken(tokenString)
+		token, err := s.accountUsecase.VerifyToken(tokenString)
 		if err != nil {
 			NewResponseUnauthorized(c, Response{
 				Message: "missing authorization",

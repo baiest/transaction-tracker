@@ -6,12 +6,13 @@ import (
 )
 
 type CreateMovementRequest struct {
-	InstitutionID string              `form:"institution_id" `
-	Type          domain.MovementType `form:"type" binding:"required"`
-	Amount        float64             `form:"amount" binding:"required"`
-	Date          time.Time           `form:"date" binding:"required" time_format:"2006-01-02T15:04:05Z07:00"`
-	Description   string              `form:"description"`
-	AccountID     string              `form:"-"`
+	InstitutionID string                  `form:"institution_id" `
+	Type          domain.MovementType     `form:"type" binding:"required"`
+	Amount        float64                 `form:"amount" binding:"required"`
+	Date          time.Time               `form:"date" binding:"required" time_format:"2006-01-02T15:04:05Z07:00"`
+	Category      domain.MovementCategory `form:"category" binding:"required"`
+	Description   string                  `form:"description"`
+	AccountID     string                  `form:"-"`
 }
 
 type MovementResponse struct {
@@ -35,18 +36,18 @@ type MovementsListResponse struct {
 }
 
 type MovementByYear struct {
-	TotalIncome  float64                  `json:"total_income"`
-	TotalOutcome float64                  `json:"total_outcome"`
-	Balance      float64                  `json:"balance"`
-	Months       []*MovementIncomeOutcome `json:"months"`
+	TotalIncome  float64                        `json:"total_income"`
+	TotalExpense float64                        `json:"total_expense"`
+	Balance      float64                        `json:"balance"`
+	Months       []MovementIncomeOutcomeByMonth `json:"months"`
 }
 
 type MovementByMonth struct {
-	TotalIncome  float64                       `json:"total_income"`
-	TotalOutcome float64                       `json:"total_outcome"`
-	Year         int                           `json:"year"`
-	Balance      float64                       `json:"balance"`
-	Days         []*MovementIncomeOutcomeByDay `json:"days"`
+	TotalIncome  float64                      `json:"total_income"`
+	TotalOutcome float64                      `json:"total_outcome"`
+	Year         int                          `json:"year"`
+	Balance      float64                      `json:"balance"`
+	Days         []MovementIncomeOutcomeByDay `json:"days"`
 }
 
 type MovementIncomeOutcome struct {
@@ -54,36 +55,43 @@ type MovementIncomeOutcome struct {
 	Outcome float64 `json:"outcome"`
 }
 
+type MovementIncomeOutcomeByMonth struct {
+	Month time.Month `json:"month"`
+	MovementIncomeOutcome
+}
 type MovementIncomeOutcomeByDay struct {
 	Day int `json:"day"`
 	MovementIncomeOutcome
 }
 
 func ToDomainMovement(req CreateMovementRequest) *domain.Movement {
-	return &domain.Movement{
-		AccountID:     req.AccountID,
-		InstitutionID: req.InstitutionID,
-		Type:          req.Type,
-		Amount:        req.Amount,
-		Date:          req.Date,
-		Description:   req.Description,
-	}
+	return domain.NewMovement(
+		req.AccountID,
+		"",
+		"",
+		"",
+		req.Description,
+		req.Amount,
+		req.Category,
+		req.Type,
+		req.Date,
+		domain.ManualSource,
+	)
 }
 
 // ToMovementResponse converts a single domain.Movement to an API MovementResponse.
 func ToMovementResponse(m *domain.Movement) *MovementResponse {
 	return &MovementResponse{
-		ID:             m.ID,
-		AccountID:      m.AccountID,
-		InstitutionID:  m.InstitutionID,
-		MessageID:      m.MessageID,
-		NotificationID: m.NotificationID,
-		Description:    m.Description,
-		Amount:         m.Amount,
-		Type:           string(m.Type),
-		Date:           m.Date,
-		Source:         string(m.Source),
-		Category:       string(m.Category),
+		ID:            m.ID,
+		AccountID:     m.AccountID,
+		InstitutionID: m.InstitutionID,
+		MessageID:     m.MessageID,
+		Description:   m.Description,
+		Amount:        m.Amount,
+		Type:          string(m.Type),
+		Date:          m.Date,
+		Source:        string(m.Source),
+		Category:      string(m.Category),
 	}
 }
 
