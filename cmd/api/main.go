@@ -14,7 +14,6 @@ import (
 	messageUsecase "transaction-tracker/internal/messages/usecase"
 	movementRepostiroy "transaction-tracker/internal/movements/repository"
 	movementUsecase "transaction-tracker/internal/movements/usecase"
-	"transaction-tracker/logger"
 	"transaction-tracker/pkg/databases/mongo"
 	"transaction-tracker/pkg/google"
 
@@ -57,11 +56,6 @@ func main() {
 	movementUsecase := movementUsecase.NewMovementUsecase(movementRepo)
 	movementHandler := handler.NewMovementHandler(movementUsecase)
 
-	logger, err := logger.GetLogger(ctx, "messages-usecase")
-	if err != nil {
-		log.Fatal("Unable to create logger message-usecase:", err)
-	}
-
 	googleClient, err := google.NewGoogleClient(ctx)
 	if err != nil {
 		log.Fatal("Unable to create google client:", err)
@@ -71,7 +65,7 @@ func main() {
 	extractUsecase := extractUsecase.NewExtractsUsecase(googleClient, extractRepo)
 
 	messageRepo := messageRepository.NewMessageRepository(messageCollection)
-	messageUsecase := messageUsecase.NewMessageUsecase(ctx, logger, googleClient, messageRepo, movementUsecase, extractUsecase)
+	messageUsecase := messageUsecase.NewMessageUsecase(ctx, googleClient, messageRepo, movementUsecase, extractUsecase)
 	messageHandler := handler.NewMessageHandler(messageUsecase)
 
 	extractHandler := handler.NewExtractsHandler(extractUsecase, messageUsecase)
