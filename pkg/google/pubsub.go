@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	pubsub "cloud.google.com/go/pubsub"
+	pubsub "cloud.google.com/go/pubsub/v2"
+	"cloud.google.com/go/pubsub/v2/apiv1/pubsubpb"
 	"google.golang.org/api/option"
 )
 
@@ -41,10 +42,17 @@ func (g *GooglePubSub) Subscribe(
 	subscriptionID string,
 	handler func(ctx context.Context, msg []byte) error,
 ) error {
-	return g.client.Subscription(subscriptionID).Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
+
+	subscription, err := g.GetSubscription(ctx, subscriptionID)
+	if err != nil {
+		return err
+	}
+
+	sub := g.client.Subscriber(subscription.GetName())
+
+	return sub.Receive(ctx, func(ctx context.Context, msg *pubsub.Message) {
 		if err := handler(ctx, msg.Data); err != nil {
 			if !strings.Contains(err.Error(), "googleapi: Error 404: Requested entity was not found") {
-				fmt.Println("error handling message:", err)
 				msg.Nack()
 
 				return
@@ -56,6 +64,8 @@ func (g *GooglePubSub) Subscribe(
 }
 
 // GetSubscription returns a subscription
-func (g *GooglePubSub) GetSubscription(ctx context.Context, subscriptionID string) (*pubsub.Subscription, error) {
-	return g.client.Subscription(subscriptionID), nil
+func (g *GooglePubSub) GetSubscription(ctx context.Context, subscriptionID string) (*pubsubpb.Subscription, error) {
+	return g.client.SubscriptionAdminClient.GetSubscription(ctx, &pubsubpb.GetSubscriptionRequest{
+		Subscription: fmt.Sprintf("projects/%s/subscriptions/%s", g.projectID, subscriptionID),
+	})
 }

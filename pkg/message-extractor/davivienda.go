@@ -18,7 +18,7 @@ var (
 	movementRegex      = regexp.MustCompile(`(?m)^(\d{2}\s+\d{2})\s+\$\s*([\d,]+\.\d{2})([+-])\s+(\d{4})\s+(.+)$`)
 	yearRegex          = regexp.MustCompile(`INFORME DEL MES:.*?/(\d{4})`)
 	regex              = regexp.MustCompile(
-		`Fecha:(?P<fecha>.+)\nHora:(?P<hora>.+)\nValor TransacciÃ³n:\s*(?P<valor>.+)\nClase de Movimiento:\s*(?P<clase>.+),\nLugar de TransacciÃ³n:(?P<lugar>.+)`)
+		`Fecha\s*:\s*(?P<fecha>[0-9]{4}[/-][0-9]{2}[/-][0-9]{2})\s*Hora\s*:\s*(?P<hora>[0-9:]+)\s*Valor\s+Transacci(?:ón|on)\s*:\s*\$?\s*(?P<valor>[0-9.,]+)\s*Clase\s+de\s+Movimiento\s*:\s*(?P<clase>[^,.;\n]+)[,.;\s]*Lugar\s+de\s+Transacci(?:ón|on)\s*:\s*(?P<lugar>.+)`)
 )
 
 type davivienda struct {
@@ -63,7 +63,7 @@ func (d *davivienda) excecuteMovement() ([]*movementDomain.Movement, error) {
 
 	matches := regex.FindStringSubmatch(cleanedText)
 	if matches == nil {
-		return nil, fmt.Errorf("not found labels: %s", d.text)
+		return nil, fmt.Errorf("not found labels: %s", cleanedText)
 	}
 
 	for i, name := range regex.SubexpNames() {
@@ -145,6 +145,20 @@ func (d *davivienda) excecuteExtract() ([]*movementDomain.Movement, error) {
 }
 
 func cleanAndNormalizeText(text string) string {
+	// Normalizar retornos de carro y asegurar UTF-8 válido
+	text = strings.ReplaceAll(text, "\r\n", "\n")
+	text = ToValidUTF8(text)
+
+	// Corregir mojibake/encodings comunes que aparecen en PDFs
+	text = strings.ReplaceAll(text, "TransacciÃ³n", "Transacción")
+	text = strings.ReplaceAll(text, "TransacciÃ³n:", "Transacción:")
+	text = strings.ReplaceAll(text, "Valor TransacciÃ³n", "Valor Transacción")
+	text = strings.ReplaceAll(text, "Lugar de TransacciÃ³n", "Lugar de Transacción")
+
+	// Normalizar espacios repetidos
+	text = regexp.MustCompile(`\s+`).ReplaceAllString(text, " ")
+
+	// Volver a lines para conservar lógica previa de etiquetas
 	lines := strings.Split(text, "\n")
 	var cleanedLines []string
 
@@ -166,17 +180,18 @@ func cleanAndNormalizeText(text string) string {
 
 				line = "Clase de Movimiento: " + value
 			}
-		} else if strings.HasPrefix(line, "Valor TransacciÃ³n:") {
+		} else if strings.HasPrefix(line, "Valor Transacción:") || strings.HasPrefix(line, "Valor TransacciÃ³n:") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
 				value := strings.TrimSpace(parts[1])
-				line = "Valor TransacciÃ³n: " + value
+				line = "Valor Transacción: " + value
 			}
-		} else if strings.HasPrefix(line, "Lugar de TransacciÃ³n:") {
+		} else if strings.HasPrefix(line, "Lugar de Transacción:") || strings.HasPrefix(line, "Lugar de TransacciÃ³n:") {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 2 {
 				value := strings.TrimSpace(parts[1])
-				line = "Lugar de TransacciÃ³n:" + value
+				// mantener sin espacio tras ":" si así lo espera la regex; aquí dejamos sin espacio como antes
+				line = "Lugar de Transacción:" + value
 			}
 		}
 

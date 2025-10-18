@@ -81,3 +81,33 @@ func TestDavivienda_excecuteExtract_Error(t *testing.T) {
 		})
 	}
 }
+
+func TestDavivienda_excecuteExtract_Success(t *testing.T) {
+	c := require.New(t)
+
+	davivienda := &davivienda{
+		extract: &extractDomain.Extract{},
+		text: `Apreciado(a) JUAN CARLOS:
+
+Le informamos que se ha registrado el siguiente movimiento de su Cta de Ahorros terminada (o) en ****4694:
+
+Fecha:2025/10/03
+Hora:16:39:37
+Valor Transacción: $500,000
+Clase de Movimiento:  Descuento     en Internet,
+Lugar de Transacción:PSE BANCOLOMBIA
+
+
+BANCO DAVIVIENDA`,
+	}
+
+	movements, err := davivienda.excecuteMovement()
+	c.NoError(err)
+	c.Equal(float64(500000), movements[0].Amount)
+
+	davivienda.text = ` Apreciado(a) JUAN CARLOS: Le informamos que se ha registrado el siguiente movimiento de su Cta de Ahorros terminada (o) en ****4694: Fecha:2025/10/10 Hora:17:50:51 Valor Transacción: $700,000 Clase de Movimiento: Retiro . Lugar de Transacción:PALMETTO CALI BANCO DAVIVIENDA`
+
+	movements, err = davivienda.excecuteMovement()
+	c.NoError(err)
+	c.Equal(float64(700000), movements[0].Amount)
+}
