@@ -14,6 +14,7 @@ import (
 	"transaction-tracker/internal/messages/domain"
 	"transaction-tracker/internal/messages/repository"
 	movementsUsecase "transaction-tracker/internal/movements/usecase"
+	"transaction-tracker/logger"
 	loggerModels "transaction-tracker/logger/models"
 	"transaction-tracker/pkg/google"
 	messageextractor "transaction-tracker/pkg/message-extractor"
@@ -55,7 +56,7 @@ type messageUsecase struct {
 // NewMessageUsecase is the constructor for the use case implementation.
 // It receives a repository interface as a dependency.
 func NewMessageUsecase(ctx context.Context, googleClient google.GoogleClientAPI, repo repository.MessageRepository, mvmUsecase movementsUsecase.MovementUsecase, extractUsecase extractsUsecase.ExtractsUsecase) MessageUsecase {
-	log := ctx.Value("logger").(*loggerModels.Logger)
+	log, _ := logger.GetLogger(ctx, "messages-usecase")
 
 	return &messageUsecase{
 		messageRepo:    repo,
