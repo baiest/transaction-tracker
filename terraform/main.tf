@@ -63,6 +63,16 @@ resource "google_pubsub_subscription" "gmail_subscription" {
   ack_deadline_seconds = 10
 }
 
+# ----------------------------------------------------------------------
+# 🔑 CAMBIO CLAVE: Permiso para VER (GetSubscription)
+# Se necesita el rol 'viewer' para que la app pueda llamar a GetSubscription sin fallar.
+# ----------------------------------------------------------------------
+resource "google_pubsub_subscription_iam_member" "sub_viewer" {
+  subscription = google_pubsub_subscription.gmail_subscription.name
+  role         = "roles/pubsub.viewer"
+  member       = "serviceAccount:${google_service_account.app_sa.email}"
+}
+
 # Allow your Service Account to consume messages
 resource "google_pubsub_subscription_iam_member" "sub_reader" {
   subscription = google_pubsub_subscription.gmail_subscription.name
