@@ -32,7 +32,7 @@ func TestProcess_MissingGmailService(t *testing.T) {
 	mockExtractsUsecase.On("GetByMessageID", mock.Anything, "msg-1").Return(nil, nil)
 	mockExtractsUsecase.On("Update", mock.Anything, mock.Anything).Return(nil)
 
-	u := NewMessageUsecase(context.Background(), nil, mockGoogle, mockMessages, mockMovementsUsecase, mockExtractsUsecase)
+	u := NewMessageUsecase(context.Background(), mockGoogle, mockMessages, mockMovementsUsecase, mockExtractsUsecase)
 
 	account := &accountsDomain.Account{ID: "acc1", GoogleAccount: &google.GoogleAccount{}}
 	msg, err := u.Process(context.Background(), "notif1", "ext-1", account)

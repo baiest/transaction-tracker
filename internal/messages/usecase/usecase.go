@@ -54,7 +54,9 @@ type messageUsecase struct {
 
 // NewMessageUsecase is the constructor for the use case implementation.
 // It receives a repository interface as a dependency.
-func NewMessageUsecase(ctx context.Context, log *loggerModels.Logger, googleClient google.GoogleClientAPI, repo repository.MessageRepository, mvmUsecase movementsUsecase.MovementUsecase, extractUsecase extractsUsecase.ExtractsUsecase) MessageUsecase {
+func NewMessageUsecase(ctx context.Context, googleClient google.GoogleClientAPI, repo repository.MessageRepository, mvmUsecase movementsUsecase.MovementUsecase, extractUsecase extractsUsecase.ExtractsUsecase) MessageUsecase {
+	log := ctx.Value("logger").(*loggerModels.Logger)
+
 	return &messageUsecase{
 		messageRepo:    repo,
 		mvmUsecase:     mvmUsecase,

@@ -127,6 +127,7 @@ func (m *MockMovementUsecase) GetPaginatedMovementsByAccountID(ctx context.Conte
 	if m == nil {
 		return nil, nil
 	}
+
 	args := m.Called(ctx, accountID, limit, offset)
 
 	var movements *domain.PaginatedMovements
@@ -135,5 +136,6 @@ func (m *MockMovementUsecase) GetPaginatedMovementsByAccountID(ctx context.Conte
 			movements = cast
 		}
 	}
+
 	return movements, args.Error(1)
 }
