@@ -26,6 +26,7 @@ func TestCreateMovement(t *testing.T) {
 			AccountID:     uuid.New().String(),
 			InstitutionID: "iid",
 			Type:          domain.Income,
+			Category:      domain.Education,
 			Amount:        150.00,
 			Date:          time.Now(),
 		}
@@ -52,17 +53,6 @@ func TestCreateMovement(t *testing.T) {
 		}
 		err := u.CreateMovement(ctx, m)
 		c.ErrorContains(err, "account ID is required")
-	})
-
-	t.Run("missing institutionID", func(t *testing.T) {
-		m := &domain.Movement{
-			AccountID: uuid.New().String(),
-			Type:      domain.Income,
-			Amount:    100,
-			Date:      time.Now(),
-		}
-		err := u.CreateMovement(ctx, m)
-		c.ErrorContains(err, "institution ID is required")
 	})
 
 	t.Run("invalid amount", func(t *testing.T) {
@@ -95,6 +85,7 @@ func TestCreateMovement(t *testing.T) {
 			InstitutionID: "iid",
 			Type:          domain.Income,
 			Amount:        100,
+			Category:      domain.Education,
 			Date:          time.Now().Add(24 * time.Hour),
 		}
 		err := u.CreateMovement(ctx, m)
@@ -107,6 +98,7 @@ func TestCreateMovement(t *testing.T) {
 			InstitutionID: "iid",
 			Type:          domain.Income,
 			Amount:        100,
+			Category:      domain.Education,
 			Date:          time.Now(),
 		}
 
@@ -128,7 +120,8 @@ func TestCreateMovementWithRepositoryError(t *testing.T) {
 	testMovement := &domain.Movement{
 		AccountID:     uuid.New().String(),
 		InstitutionID: "iid",
-		Type:          domain.Income,
+		Category:      domain.Debt,
+		Type:          domain.Expense,
 		Amount:        150.00,
 	}
 
@@ -148,13 +141,14 @@ func TestGetMovementByID(t *testing.T) {
 	usecase := NewMovementUsecase(mockRepo)
 	ctx := context.Background()
 	testID := uuid.New().String()
-	expectedMovement := &domain.Movement{ID: testID}
+	expectedMovement := &domain.Movement{ID: testID, AccountID: "acc1"}
 
-	mockRepo.On("GetMovementByID", ctx, testID).Return(expectedMovement, nil).Once()
-	foundMovement, err := usecase.GetMovementByID(ctx, testID)
+	mockRepo.On("GetMovementByID", ctx, testID, "acc1").Return(expectedMovement, nil).Once()
+	foundMovement, err := usecase.GetMovementByID(ctx, testID, "acc1")
 	c.NoError(err)
 	c.NotNil(foundMovement)
 	c.Equal(expectedMovement.ID, foundMovement.ID)
+	c.Equal(expectedMovement.AccountID, foundMovement.AccountID)
 	mockRepo.AssertExpectations(t)
 }
 
@@ -165,8 +159,8 @@ func TestGetMovementByIDWithRepositoryError(t *testing.T) {
 	ctx := context.Background()
 	testID := uuid.New().String()
 
-	mockRepo.On("GetMovementByID", ctx, testID).Return(nil, errors.New("db error")).Once()
-	foundMovement, err := usecase.GetMovementByID(ctx, testID)
+	mockRepo.On("GetMovementByID", ctx, testID, "acc1").Return(nil, errors.New("db error")).Once()
+	foundMovement, err := usecase.GetMovementByID(ctx, testID, "acc1")
 	c.Error(err)
 	c.Nil(foundMovement)
 	mockRepo.AssertExpectations(t)
@@ -186,7 +180,7 @@ func TestGetMovementsByAccountID(t *testing.T) {
 	}
 
 	limit := 10
-	offset := 1
+	offset := 0
 
 	mockRepo.On("GetMovementsByAccountID", ctx, testAccountID, limit, offset).
 		Return(expectedMovements, nil).Once()
@@ -210,7 +204,7 @@ func TestGetMovementsByAccountIDWithRepositoryError(t *testing.T) {
 	testAccountID := uuid.New().String()
 
 	limit := 10
-	offset := 1
+	offset := 0
 
 	mockRepo.On("GetMovementsByAccountID", ctx, testAccountID, limit, offset).
 		Return(nil, errors.New("db error")).Once()

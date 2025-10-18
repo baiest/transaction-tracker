@@ -20,8 +20,8 @@ func (m *MockMovementRepository) CreateMovement(ctx context.Context, movement *d
 }
 
 // GetMovementByID simulates retrieving a movement by its ID.
-func (m *MockMovementRepository) GetMovementByID(ctx context.Context, id string) (*domain.Movement, error) {
-	args := m.Called(ctx, id)
+func (m *MockMovementRepository) GetMovementByID(ctx context.Context, id string, accountID string) (*domain.Movement, error) {
+	args := m.Called(ctx, id, accountID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -46,4 +46,16 @@ func (m *MockMovementRepository) GetTotalMovementsByAccountID(ctx context.Contex
 	}
 
 	return args.Get(0).(int), args.Error(1)
+}
+
+// Delete simulates deleting a movement.
+func (m *MockMovementRepository) Delete(ctx context.Context, id string, accountID string) error {
+	args := m.Called(ctx, id, accountID)
+	return args.Error(0)
+}
+
+// DeleteMovementsByExtractID simulates deleting movements by extract ID.
+func (m *MockMovementRepository) DeleteMovementsByExtractID(ctx context.Context, extractID string) error {
+	args := m.Called(ctx, extractID)
+	return args.Error(0)
 }

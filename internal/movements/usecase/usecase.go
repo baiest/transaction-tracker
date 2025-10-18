@@ -8,6 +8,11 @@ import (
 	"transaction-tracker/internal/movements/repository"
 )
 
+var (
+	ErrMovementNotFound      = errors.New("movement not found")
+	ErrMustBeGreaterThanZero = errors.New("amount must be greater than zero")
+)
+
 type movementUsecase struct {
 	movementRepo repository.MovementRepository
 }
@@ -26,6 +31,9 @@ func (u *movementUsecase) CreateMovement(ctx context.Context, movement *domain.M
 		return errors.New("movement cannot be nil")
 	}
 
+	// TODO: remove this
+	movement.InstitutionID = "remove this"
+
 	if movement.AccountID == "" {
 		return errors.New("account ID is required")
 	}
@@ -35,10 +43,15 @@ func (u *movementUsecase) CreateMovement(ctx context.Context, movement *domain.M
 	}
 
 	if movement.Amount <= 0 {
-		return errors.New("amount must be greater than zero")
+		return ErrMustBeGreaterThanZero
 	}
 
-	_, err := domain.ParseMovementType(string(movement.Type))
+	_, err := domain.ParseMovementCategory(string(movement.Category))
+	if err != nil {
+		return err
+	}
+
+	_, err = domain.ParseMovementType(string(movement.Type))
 	if err != nil {
 		return err
 	}
@@ -51,18 +64,32 @@ func (u *movementUsecase) CreateMovement(ctx context.Context, movement *domain.M
 }
 
 // GetMovementByID is a sample method to get a movement.
-func (u *movementUsecase) GetMovementByID(ctx context.Context, id string) (*domain.Movement, error) {
-	return u.movementRepo.GetMovementByID(ctx, id)
+func (u *movementUsecase) GetMovementByID(ctx context.Context, id string, accountID string) (*domain.Movement, error) {
+	movement, err := u.movementRepo.GetMovementByID(ctx, id, accountID)
+	if err != nil {
+		if errors.Is(err, repository.ErrMovementNotFound) {
+			return nil, ErrMovementNotFound
+		}
+
+		return nil, err
+	}
+
+	return movement, nil
 }
 
 // GetMovementsByUserID is a sample method to get a user's movements.
 func (u *movementUsecase) GetPaginatedMovementsByAccountID(ctx context.Context, accountID string, limit int, offset int) (*domain.PaginatedMovements, error) {
 	if limit <= 0 {
-		limit = 1
+		limit = 10
 	}
 
 	if limit > 20 {
 		limit = 20
+	}
+
+	offset -= 1
+	if offset < 0 {
+		offset = 0
 	}
 
 	totalRecords, err := u.movementRepo.GetTotalMovementsByAccountID(ctx, accountID)
@@ -88,4 +115,49 @@ func (u *movementUsecase) GetPaginatedMovementsByAccountID(ctx context.Context, 
 		Offset:       offset,
 		CurrentPage:  (offset / limit) + 1,
 	}, nil
+}
+
+func (u *movementUsecase) DeleteMovement(ctx context.Context, id string, accountID string) error {
+	_, err := u.GetMovementByID(ctx, id, accountID)
+	if err != nil {
+		return err
+	}
+
+	return u.movementRepo.Delete(ctx, id, accountID)
+}
+
+func (u *movementUsecase) GetMovementsByYear(ctx context.Context, accountID string, year int) ([]*domain.Movement, error) {
+	movements, err := u.movementRepo.GetMovementsByAccountID(ctx, accountID, 1000, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	filteredMovements := []*domain.Movement{}
+	for _, m := range movements {
+		if m.Date.Year() == year {
+			filteredMovements = append(filteredMovements, m)
+		}
+	}
+
+	return filteredMovements, nil
+}
+
+func (u *movementUsecase) GetMovementsByMonth(ctx context.Context, accountID string, year int, month int) ([]*domain.Movement, error) {
+	movements, err := u.movementRepo.GetMovementsByAccountID(ctx, accountID, 1000, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	filteredMovements := []*domain.Movement{}
+	for _, m := range movements {
+		if m.Date.Year() == year && int(m.Date.Month()) == month {
+			filteredMovements = append(filteredMovements, m)
+		}
+	}
+
+	return filteredMovements, nil
+}
+
+func (u *movementUsecase) DeleteMovementsByExtractID(ctx context.Context, extractID string) error {
+	return u.movementRepo.DeleteMovementsByExtractID(ctx, extractID)
 }

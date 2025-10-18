@@ -2,12 +2,17 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 	"transaction-tracker/internal/movements/domain"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+var (
+	ErrMovementNotFound = errors.New("movement not found")
 )
 
 // DBQuerier is the interface that abstracts the database methods we need.
@@ -37,6 +42,7 @@ func (r *postgresRepository) CreateMovement(ctx context.Context, movement *domai
 	id,
 	account_id,
 	institution_id,
+	message_id,
 	description,
 	amount,
 	type,
@@ -45,11 +51,12 @@ func (r *postgresRepository) CreateMovement(ctx context.Context, movement *domai
 	category,
 	created_at,
 	updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
 	_, err := r.db.Exec(ctx, query,
 		movement.ID,
 		movement.AccountID,
 		movement.InstitutionID,
+		movement.MessageID,
 		movement.Description,
 		movement.Amount,
 		movement.Type,
@@ -63,13 +70,13 @@ func (r *postgresRepository) CreateMovement(ctx context.Context, movement *domai
 }
 
 // GetMovementByID gets a movement by ID.
-func (r *postgresRepository) GetMovementByID(ctx context.Context, id string) (*domain.Movement, error) {
+func (r *postgresRepository) GetMovementByID(ctx context.Context, id string, accountID string) (*domain.Movement, error) {
 	query := `SELECT
-	 	id, account_id, institution_id, description, amount, type, date, source, category, created_at, updated_at
+	id, account_id, institution_id, message_id, description, amount, type, date, source, category, created_at, updated_at
 	FROM movements
-	WHERE id = $1`
+	WHERE id = $1 AND account_id = $2`
 
-	row := r.db.QueryRow(ctx, query, id)
+	row := r.db.QueryRow(ctx, query, id, accountID)
 
 	return scanToMovement(row.Scan)
 }
@@ -89,7 +96,7 @@ func (r *postgresRepository) GetTotalMovementsByAccountID(ctx context.Context, a
 // GetMovementsByAccountID gets a user's movements with pagination.
 func (r *postgresRepository) GetMovementsByAccountID(ctx context.Context, accountID string, limit int, offset int) ([]*domain.Movement, error) {
 	query := `SELECT
-		id, account_id, institution_id, description, amount, type, date, source, category, created_at, updated_at
+		id, account_id, institution_id, message_id, description, amount, type, date, source, category, created_at, updated_at
 	FROM movements
 	WHERE account_id = $1
 	ORDER BY date DESC
@@ -99,6 +106,7 @@ func (r *postgresRepository) GetMovementsByAccountID(ctx context.Context, accoun
 	if err != nil {
 		return nil, err
 	}
+
 	defer rows.Close()
 
 	var movements []*domain.Movement
@@ -121,21 +129,29 @@ func (r *postgresRepository) GetMovementsByAccountID(ctx context.Context, accoun
 func scanToMovement(scanFn func(...any) error) (*domain.Movement, error) {
 	m := &domain.Movement{}
 
-	var institutionID, description, source, category *string
+	var institutionID, messageID, description, source *string
 	var date, createdAt, updatedAt *time.Time
-	var movementType string
+	var movementType, category string
 
 	err := scanFn(
-		&m.ID, &m.AccountID, &institutionID, &description, &m.Amount,
+		&m.ID, &m.AccountID, &institutionID, &messageID, &description, &m.Amount,
 		&movementType, &date, &source, &category, &createdAt, &updatedAt,
 	)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrMovementNotFound
+		}
+
 		return nil, err
 	}
 
 	if institutionID != nil {
 		m.InstitutionID = *institutionID
+	}
+
+	if messageID != nil {
+		m.MessageID = *messageID
 	}
 
 	if description != nil {
@@ -150,11 +166,8 @@ func scanToMovement(scanFn func(...any) error) (*domain.Movement, error) {
 		m.Source = domain.Source(*source)
 	}
 
-	if category != nil {
-		m.Category = *category
-	}
-
 	m.Type = domain.MovementType(movementType)
+	m.Category = domain.MovementCategory(category)
 
 	if createdAt != nil {
 		m.CreatedAt = *createdAt
@@ -165,4 +178,18 @@ func scanToMovement(scanFn func(...any) error) (*domain.Movement, error) {
 	}
 
 	return m, nil
+}
+
+func (r *postgresRepository) Delete(ctx context.Context, id string, accountID string) error {
+	query := `DELETE FROM movements WHERE id = $1 AND account_id = $2`
+	_, err := r.db.Exec(ctx, query, id, accountID)
+	return err
+}
+
+func (r *postgresRepository) DeleteMovementsByExtractID(ctx context.Context, extractID string) error {
+	query := `DELETE FROM movements WHERE extract_id = $1`
+
+	_, err := r.db.Exec(ctx, query, extractID)
+
+	return err
 }

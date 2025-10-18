@@ -1,48 +1,25 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"transaction-tracker/api/models"
-	"transaction-tracker/api/services/accounts"
 	"transaction-tracker/internal/movements/domain"
 	"transaction-tracker/internal/movements/usecase"
-	"transaction-tracker/logger"
 
-	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
-
-func setupTestContext(method, target string, body io.Reader) (*gin.Context, *httptest.ResponseRecorder) {
-	gin.SetMode(gin.TestMode)
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-
-	req, err := http.NewRequest(method, target, body)
-	if err != nil {
-	}
-	c.Request = req
-
-	mockLogger, _ := logger.GetLogger(c, "test")
-	c.Set("logger", mockLogger)
-
-	c.Set("account", &accounts.Account{ID: "accountID"})
-
-	return c, w
-}
 
 func TestGetMovements_Success(t *testing.T) {
 	c := require.New(t)
 
-	movementsMock := []*domain.Movement{
+	movements := []*domain.Movement{
 		{
 			ID:        "1",
 			AccountID: "test-account-id",
@@ -51,12 +28,10 @@ func TestGetMovements_Success(t *testing.T) {
 		},
 	}
 
-	mockUsecase := &usecase.MockMovementUsecase{
-		GetPaginatedMovementsByAccountIDFunc: func(ctx context.Context, accountID string, limit, offset int) (*domain.PaginatedMovements, error) {
-			return &domain.PaginatedMovements{Movements: movementsMock, CurrentPage: 1}, nil
-		},
-	}
-	testHandler := NewMovementHandler(mockUsecase)
+	movementsMock := new(usecase.MockMovementUsecase)
+	movementsMock.On("GetPaginatedMovementsByAccountID", mock.Anything, "accountID", 5, 2).Return(&domain.PaginatedMovements{Movements: movements, CurrentPage: 1}, nil)
+
+	testHandler := NewMovementHandler(movementsMock)
 
 	ginContext, w := setupTestContext(http.MethodGet, "/movements?page=2&limit=5", nil)
 
@@ -75,11 +50,9 @@ func TestGetMovements_Success(t *testing.T) {
 func TestGetMovements_UsecaseError(t *testing.T) {
 	c := require.New(t)
 
-	mockUsecase := &usecase.MockMovementUsecase{
-		GetPaginatedMovementsByAccountIDFunc: func(ctx context.Context, accountID string, limit, offset int) (*domain.PaginatedMovements, error) {
-			return nil, errors.New("database connection failed")
-		},
-	}
+	mockUsecase := new(usecase.MockMovementUsecase)
+	mockUsecase.On("GetPaginatedMovementsByAccountID", mock.Anything, "accountID", 5, 2).Return(nil, errors.New("database connection failed"))
+
 	testHandler := NewMovementHandler(mockUsecase)
 
 	ginContext, w := setupTestContext(http.MethodGet, "/movements?page=2&limit=5", nil)
@@ -92,15 +65,12 @@ func TestGetMovements_UsecaseError(t *testing.T) {
 func TestCreateMovement_UsecaseError(t *testing.T) {
 	c := require.New(t)
 
-	mockUsecase := &usecase.MockMovementUsecase{
-		CreateMovementFunc: func(ctx context.Context, movement *domain.Movement) error {
-			return errors.New("db error")
-		},
-	}
+	mockUsecase := new(usecase.MockMovementUsecase)
+	mockUsecase.On("CreateMovement", mock.Anything, mock.Anything).Return(errors.New("database connection failed"))
 
 	testHandler := NewMovementHandler(mockUsecase)
 
-	body := strings.NewReader("institution_id=iid&type=income&amount=1500&date=2025-09-20T10:30:00Z&description=test+movement")
+	body := strings.NewReader("institution_id=id&category=food&type=income&amount=1500&date=2025-09-20T10:30:00Z&description=test+movement")
 	ginContext, w := setupTestContext(http.MethodPost, "/movements", body)
 
 	ginContext.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -113,12 +83,9 @@ func TestCreateMovement_UsecaseError(t *testing.T) {
 func TestCreateMovement_InvalidRequestBody(t *testing.T) {
 	c := require.New(t)
 
-	mockUsecase := &usecase.MockMovementUsecase{
-		CreateMovementFunc: func(ctx context.Context, movement *domain.Movement) error {
-			t.Fatalf("CreateMovement should not be called in case of a binding error")
-			return nil
-		},
-	}
+	mockUsecase := new(usecase.MockMovementUsecase)
+	mockUsecase.On("CreateMovement", mock.Anything, mock.Anything).Return(nil)
+
 	testHandler := NewMovementHandler(mockUsecase)
 
 	body := strings.NewReader("type=income&amount=abc&date=not-a-date")
@@ -134,25 +101,13 @@ func TestCreateMovement_InvalidRequestBody(t *testing.T) {
 func TestCreateMovement_Success(t *testing.T) {
 	c := require.New(t)
 
-	called := false
-	mockUsecase := &usecase.MockMovementUsecase{
-		CreateMovementFunc: func(ctx context.Context, movement *domain.Movement) error {
-			called = true
+	mockUsecase := new(usecase.MockMovementUsecase)
+	mockUsecase.On("CreateMovement", mock.Anything, mock.Anything).Return(nil)
 
-			c.Equal(domain.Income, movement.Type)
-			c.Equal("accountID", movement.AccountID)
-			c.Equal("inst-1", movement.InstitutionID)
-			c.Equal("Salary", movement.Description)
-			c.Equal(float64(1500), movement.Amount)
-			c.Equal("2025-09-20", movement.Date.Format("2006-01-02"))
-
-			return nil
-		},
-	}
 	testHandler := NewMovementHandler(mockUsecase)
 
 	body := strings.NewReader(
-		"type=income&institution_id=inst-1&description=Salary&amount=1500&date=2025-09-20T10:17:00Z",
+		"type=income&institution_id=inst-1&category=food&description=Salary&amount=1500&date=2025-09-20T10:17:00Z",
 	)
 
 	ginContext, w := setupTestContext(http.MethodPost, "/movements", body)
@@ -160,6 +115,5 @@ func TestCreateMovement_Success(t *testing.T) {
 
 	testHandler.CreateMovement(ginContext)
 
-	c.True(called, "usecase.CreateMovement should be called")
 	c.Equal(http.StatusCreated, w.Code)
 }

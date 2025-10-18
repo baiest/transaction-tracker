@@ -26,11 +26,11 @@ func TestMockMovementRepository_GetMovementByID(t *testing.T) {
 	mockRepo := new(MockMovementRepository)
 	ctx := context.Background()
 
-	expectedMovement := &domain.Movement{ID: "mov1"}
+	expectedMovement := &domain.Movement{ID: "mov1", AccountID: "acc1"}
 
-	mockRepo.On("GetMovementByID", ctx, "mov1").Return(expectedMovement, nil)
+	mockRepo.On("GetMovementByID", ctx, "mov1", "acc1").Return(expectedMovement, nil)
 
-	result, err := mockRepo.GetMovementByID(ctx, "mov1")
+	result, err := mockRepo.GetMovementByID(ctx, "mov1", "acc1")
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedMovement, result)
