@@ -17,7 +17,7 @@ const mockUseMovementsStore = async (
   timeSelected: string,
   data: MovementByMonth | MovementByYear | undefined = {
     totalIncome: 1000,
-    totalOutcome: 1500,
+    totalExpense: 1500,
     balance: -500,
     months: [],
     days: []
@@ -48,7 +48,7 @@ describe("Home Page", () => {
   it("renders with a year selected and displays correct financial data", async () => {
     await mockUseMovementsStore("year", {
       totalIncome: 1000,
-      totalOutcome: 1500,
+      totalExpense: 1500,
       balance: -500,
       months: []
     });
@@ -71,7 +71,7 @@ describe("Home Page", () => {
   it("renders with a month selected and displays correct financial data", async () => {
     await mockUseMovementsStore("month", {
       totalIncome: 500,
-      totalOutcome: 200,
+      totalExpense: 200,
       balance: 300,
       days: []
     });
@@ -85,8 +85,8 @@ describe("Home Page", () => {
 
   it("renders with 'all_years' selected and displays correct financial data", async () => {
     await mockUseMovementsStore("all_years", undefined, [
-      { totalIncome: 500, totalOutcome: 200, balance: 300, months: [] },
-      { totalIncome: 1000, totalOutcome: 500, balance: 500, months: [] }
+      { totalIncome: 500, totalExpense: 200, balance: 300, months: [] },
+      { totalIncome: 1000, totalExpense: 500, balance: 500, months: [] }
     ]);
 
     render(<Home />);
@@ -105,7 +105,7 @@ describe("Home Page", () => {
   it("calculates percentage correctly when income is positive", async () => {
     await mockUseMovementsStore("year", {
       totalIncome: 2000,
-      totalOutcome: 1500,
+      totalExpense: 1500,
       balance: 500,
       months: []
     });
@@ -117,7 +117,7 @@ describe("Home Page", () => {
   it("displays 0% when total income is zero", async () => {
     await mockUseMovementsStore("year", {
       totalIncome: 0,
-      totalOutcome: 500,
+      totalExpense: 500,
       balance: -500,
       months: []
     });
@@ -129,7 +129,7 @@ describe("Home Page", () => {
   it("renders other static UI elements correctly", async () => {
     await mockUseMovementsStore("year", {
       totalIncome: 1000,
-      totalOutcome: 1500,
+      totalExpense: 1500,
       balance: -500,
       months: []
     });
@@ -147,7 +147,7 @@ describe("Home Page", () => {
   it('passes correct data to LineChart when timeSelected is "year"', async () => {
     const mockData = {
       totalIncome: 1000,
-      totalOutcome: 500,
+      totalExpense: 500,
       balance: 500,
       months: [
         { income: 100, outcome: 50 },
@@ -164,7 +164,7 @@ describe("Home Page", () => {
   it('passes correct data to LineChart when timeSelected is "month"', async () => {
     const mockData: MovementByMonth = {
       totalIncome: 100,
-      totalOutcome: 50,
+      totalExpense: 50,
       balance: 50,
       days: [
         { day: 1, income: 10, outcome: 5 },
@@ -181,13 +181,13 @@ describe("Home Page", () => {
     const mockAllYearsData: MovementByYear[] = [
       {
         totalIncome: 1000,
-        totalOutcome: 500,
+        totalExpense: 500,
         balance: 500,
         months: [{ income: 100, outcome: 50 }]
       },
       {
         totalIncome: 2000,
-        totalOutcome: 1000,
+        totalExpense: 1000,
         balance: 500,
         months: [{ income: 200, outcome: 100 }]
       }

@@ -5,6 +5,7 @@ import "./globals.css";
 import Sidebar from "@/ui/components/Sidebar";
 import Header from "@/ui/components/Header";
 import ThemeProvider from "@/ui/components/ThemeProvider";
+import { Toaster } from "@/ui/components/Sonner";
 
 const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
@@ -23,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${poppins.variable} antialiased flex min-h-screen bg-white`}
       >
@@ -39,6 +40,7 @@ export default function RootLayout({
             <Header />
             <main className="w-full max-w-[1700px] mx-auto">{children}</main>
           </div>
+          <Toaster richColors />
         </ThemeProvider>
       </body>
     </html>

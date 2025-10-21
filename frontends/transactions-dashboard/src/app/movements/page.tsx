@@ -23,14 +23,14 @@ export default function Movements() {
 
   const columns = useMemo<ColumnDef<Movement>[]>(
     () => [
-      { accessorKey: "detail", header: "Details" },
+      { accessorKey: "description", header: "Description" },
       { accessorKey: "date", header: "Date" },
       {
-        accessorKey: "value",
+        accessorKey: "amount",
         header: "Amount",
         cell: ({ row }) => {
-          const amount: number = row.getValue("value");
-          const isNegative = row.original.isNegative;
+          const amount: number = row.getValue("amount");
+          const isNegative = row.original.type === "expense";
 
           return (
             <div

@@ -4,11 +4,14 @@ import { MovementsRepository } from "@/infrastructure/repositories/movements";
 import { create } from "zustand";
 import { MovementsStore, Time } from "./models";
 import { GetMovements } from "@/core/usecases/getMovements";
+import { MovementRequest } from "@/core/entities/Movement";
+import { CreateMovement } from "@/core/usecases/createMovement";
 
 export const useMovementsStore = create<MovementsStore>((set) => {
   const movementsRepository = new MovementsRepository();
   const getMovementsByYear = new GetMovementsByYear(movementsRepository);
   const getMovementsByMonth = new GetMovementsByMonth(movementsRepository);
+  const createMovement = new CreateMovement(movementsRepository);
   const getMovements = new GetMovements(movementsRepository);
 
   return {
@@ -16,13 +19,13 @@ export const useMovementsStore = create<MovementsStore>((set) => {
     movements: [],
     movementsByYear: {
       totalIncome: 0,
-      totalOutcome: 0,
+      totalExpense: 0,
       balance: 0,
       months: []
     },
     movementsByMonth: {
       totalIncome: 0,
-      totalOutcome: 0,
+      totalExpense: 0,
       balance: 0,
       days: []
     },
@@ -78,6 +81,19 @@ export const useMovementsStore = create<MovementsStore>((set) => {
         set({
           movements: data,
           totalPages: getMovements.totalPages,
+          isLoading: false
+        });
+      } catch (err: unknown) {
+        set({ error: (err as Error).message, isLoading: false });
+      }
+    },
+
+    createMovement: async (movement: MovementRequest) => {
+      set({ isLoading: true, error: null });
+
+      try {
+        await createMovement.excecute(movement);
+        set({
           isLoading: false
         });
       } catch (err: unknown) {

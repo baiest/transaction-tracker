@@ -36,7 +36,7 @@ export class GetMovementsByYear {
         : {
             balance: 0,
             totalIncome: 0,
-            totalOutcome: 0,
+            totalExpense: 0,
             months: [{ income: 0, outcome: 0 }]
           }
     );

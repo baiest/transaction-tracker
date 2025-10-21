@@ -12,7 +12,7 @@ import type {
   MovementYear
 } from "@/core/entities/Movement";
 
-type MovementsTotalTypes = "totalIncome" | "totalOutcome" | "balance";
+type MovementsTotalTypes = "totalIncome" | "totalExpense" | "balance";
 type MovementTypes = "income" | "outcome";
 
 const getData = (data: MovementYear[] | MovementMonth[], type: MovementTypes) =>
@@ -63,7 +63,7 @@ export default function Home() {
     let rawData: MovementYear[] | MovementMonth[] = [];
     let labels: string[] = [];
     let totalIncome = 0;
-    let totalOutcome = 0;
+    let totalExpense = 0;
     let balance = 0;
 
     switch (timeSelected) {
@@ -73,21 +73,21 @@ export default function Home() {
           (_, i) => `${MONTHS[i % 12]} ${2021 + Math.floor(i / 12)}`
         );
         totalIncome = getTotal(allYearsRaw, "totalIncome");
-        totalOutcome = getTotal(allYearsRaw, "totalOutcome");
+        totalExpense = getTotal(allYearsRaw, "totalExpense");
         balance = getTotal(allYearsRaw, "balance");
         break;
       case "year":
         rawData = movementsByYear.months;
         labels = MONTHS;
         totalIncome = movementsByYear.totalIncome;
-        totalOutcome = movementsByYear.totalOutcome;
+        totalExpense = movementsByYear.totalExpense;
         balance = movementsByYear.balance;
         break;
       case "month":
         rawData = movementsByMonth.days;
         labels = Array.from({ length: 31 }, (_, index) => `${index + 1}`);
         totalIncome = movementsByMonth.totalIncome;
-        totalOutcome = movementsByMonth.totalOutcome;
+        totalExpense = movementsByMonth.totalExpense;
         balance = movementsByMonth.balance;
         break;
       default:
@@ -105,10 +105,10 @@ export default function Home() {
         ? parseFloat(((balance / totalIncome) * 100).toFixed(2))
         : 0;
 
-    return { series, labels, totalIncome, totalOutcome, balance, percentage };
+    return { series, labels, totalIncome, totalExpense, balance, percentage };
   }, [timeSelected, allYearsRaw, movementsByYear, movementsByMonth]);
 
-  const { series, labels, totalIncome, totalOutcome, balance, percentage } =
+  const { series, labels, totalIncome, totalExpense, balance, percentage } =
     chartData;
 
   return (
@@ -127,7 +127,7 @@ export default function Home() {
       <div className="dark:bg-gray-800 p-4 rounded">
         <h3 className="text-sm text-gray-400">Total Expenses</h3>
         <p className="text-2xl font-semibold text-red-500">
-          {format(totalOutcome)}
+          {format(totalExpense)}
         </p>
         <div className="flex gap-2 mt-2 text-xs text-gray-300">
           <span>Fixed</span>

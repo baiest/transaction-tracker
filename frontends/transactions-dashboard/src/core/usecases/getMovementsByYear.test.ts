@@ -19,7 +19,7 @@ describe("GetMovementsByYear", () => {
   it("should call repository.getMovementsByYear with a single correct year and return the result", async () => {
     const mockData: MovementByYear = {
       totalIncome: 1000,
-      totalOutcome: 500,
+      totalExpense: 500,
       balance: 500,
       months: [{ income: 100, outcome: 50 }]
     };
@@ -36,13 +36,13 @@ describe("GetMovementsByYear", () => {
   it("should call repository.getMovementsByYear for multiple years and return all results", async () => {
     const mockData2023: MovementByYear = {
       totalIncome: 1000,
-      totalOutcome: 500,
+      totalExpense: 500,
       balance: 500,
       months: [{ income: 100, outcome: 50 }]
     };
     const mockData2024: MovementByYear = {
       totalIncome: 1200,
-      totalOutcome: 600,
+      totalExpense: 600,
       balance: 600,
       months: [{ income: 120, outcome: 60 }]
     };
@@ -60,7 +60,7 @@ describe("GetMovementsByYear", () => {
   it("should handle null or undefined results from the repository by returning default data", async () => {
     const mockData2023: MovementByYear = {
       totalIncome: 1000,
-      totalOutcome: 500,
+      totalExpense: 500,
       balance: 500,
       months: [{ income: 100, outcome: 50 }]
     };
@@ -76,13 +76,13 @@ describe("GetMovementsByYear", () => {
       {
         balance: 0,
         totalIncome: 0,
-        totalOutcome: 0,
+        totalExpense: 0,
         months: [{ income: 0, outcome: 0 }]
       },
       {
         balance: 0,
         totalIncome: 0,
-        totalOutcome: 0,
+        totalExpense: 0,
         months: [{ income: 0, outcome: 0 }]
       }
     ]);
