@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"sort"
 	"strconv"
 	"time"
 	"transaction-tracker/api/models"
@@ -259,6 +260,10 @@ func (h *MovementHandler) GetMovementsByYear(c *gin.Context) {
 		months = append(months, m)
 	}
 
+	sort.Slice(months, func(i, j int) bool {
+		return months[i].Month < months[j].Month
+	})
+
 	models.NewResponseOK(c, models.Response{
 		Data: models.MovementByYear{
 			TotalIncome:  float64(totalIncome),
@@ -359,6 +364,10 @@ func (h *MovementHandler) GetMovementsByMonth(c *gin.Context) {
 	for _, m := range daysMap {
 		days = append(days, m)
 	}
+
+	sort.Slice(days, func(i, j int) bool {
+		return days[i].Day < days[j].Day
+	})
 
 	models.NewResponseOK(c, models.Response{
 		Data: models.MovementByMonth{
