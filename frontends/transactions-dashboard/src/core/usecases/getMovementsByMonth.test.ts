@@ -10,6 +10,8 @@ describe("GetMovementsByMonth", () => {
 
   beforeEach(() => {
     mockRepository = {
+      createMovement: vi.fn(),
+      getMovements: vi.fn(),
       getMovementsByYear: vi.fn(),
       getMovementsByMonth: vi.fn()
     };
@@ -19,7 +21,7 @@ describe("GetMovementsByMonth", () => {
   it("should call repository.getMovementsByMonth with the correct year and month", async () => {
     const mockData: MovementByMonth = {
       totalIncome: 100,
-      totalOutcome: 50,
+      totalExpense: 50,
       balance: 50,
       days: [{ day: 15, income: 100, outcome: 50 }]
     };
@@ -39,7 +41,7 @@ describe("GetMovementsByMonth", () => {
     );
     expect(result).toEqual({
       totalIncome: 100,
-      totalOutcome: 50,
+      totalExpense: 50,
       balance: 50,
       days: [
         ...Array(14).fill({ day: 0, income: 0, outcome: 0 }),
@@ -52,7 +54,7 @@ describe("GetMovementsByMonth", () => {
   it("should handle multiple entries in the days array", async () => {
     const mockData: MovementByMonth = {
       totalIncome: 200,
-      totalOutcome: 75,
+      totalExpense: 75,
       balance: 125,
       days: [
         { day: 5, income: 50, outcome: 10 },
@@ -80,7 +82,7 @@ describe("GetMovementsByMonth", () => {
   it("should handle an empty days array from the repository", async () => {
     const mockData: MovementByMonth = {
       totalIncome: 0,
-      totalOutcome: 0,
+      totalExpense: 0,
       balance: 0,
       days: []
     };
