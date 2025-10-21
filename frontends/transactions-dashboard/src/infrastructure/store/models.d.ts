@@ -1,7 +1,8 @@
 import type {
   Movement,
   MovementByMonth,
-  MovementByYear
+  MovementByYear,
+  MovementRequest
 } from "@/core/entities/Movement";
 
 export type Time = "all_years" | "year" | "month";
@@ -25,4 +26,5 @@ export interface MovementsStore {
   fetchMomentsByMonth: (year: number, month: number) => Promise<void>;
   fetchAllYearsData: (years: number[]) => Promise<void>;
   fetchMovements: (page: number) => Promise<void>;
+  createMovement: (movement: MovementRequest) => Promise<void>
 }

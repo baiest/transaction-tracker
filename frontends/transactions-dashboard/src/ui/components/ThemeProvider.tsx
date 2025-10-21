@@ -10,13 +10,13 @@ export default function ThemeProvider({
   children,
   ...props
 }: ThemeProviderProps) {
-  const [mounted, setMounted] = React.useState(false);
+    // const [mounted, setMounted] = React.useState(false);
 
-  React.useEffect(() => setMounted(true), []);
+    // React.useEffect(() => setMounted(true), []);
 
-  if (!mounted) {
-    return <div style={{ visibility: "hidden" }}>{children}</div>;
-  }
+    // if (!mounted) {
+    //   return children;
+    // }
 
   return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
 }

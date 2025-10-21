@@ -48,7 +48,7 @@ describe("MovementsRepository", () => {
     const repo = new MovementsRepository();
     const mockResponse: MovementByYear = {
       totalIncome: 100,
-      totalOutcome: 40,
+      totalExpense: 40,
       balance: 60,
       months: []
     };
@@ -64,7 +64,7 @@ describe("MovementsRepository", () => {
     const repo = new MovementsRepository();
     const mockResponse: MovementByMonth = {
       totalIncome: 0,
-      totalOutcome: 0,
+      totalExpense: 0,
       balance: 0,
       days: []
     };

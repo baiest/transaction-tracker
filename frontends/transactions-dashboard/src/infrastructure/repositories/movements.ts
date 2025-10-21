@@ -1,6 +1,8 @@
 import type {
   IMovementsRepository,
+  Movement,
   MovementByYear,
+  MovementRequest,
   MovementsResponse
 } from "@/core/entities/Movement";
 import { createFetchClient, API_BASE_URL } from "../http/fetchClient";
@@ -14,8 +16,15 @@ export class MovementsRepository implements IMovementsRepository {
     this.client = createFetchClient(API_BASE_URL);
   }
 
+  createMovement(movement: MovementRequest): Promise<Movement> {
+    return this.client<Movement>(`/movements`, {
+      method: "POST",
+      body: movement
+    });
+  }
+
   getMovements(page: number): Promise<MovementsResponse> {
-    return this.client<MovementsResponse>(`/movements?page=${page}`);
+    return this.client<MovementsResponse>(`/movements?page=${page}&limit=20`);
   }
 
   getMovementsByYear(year: number): Promise<MovementByYear> {

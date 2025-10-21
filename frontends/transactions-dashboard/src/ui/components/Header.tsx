@@ -3,13 +3,17 @@
 import { Time } from "@/infrastructure/store/models";
 import { useMovementsStore } from "@/infrastructure/store/movements";
 import { MONTHS } from "@/utils/dates";
+import { Popover, PopoverTrigger, PopoverContent } from "./Popover";
+import { Button } from "./Button";
 import { usePathname } from "next/navigation";
+import NewMovementForm from "@/ui/forms/NewMovement";
+import { useState } from "react";
 
 export default function Header() {
   const { year, month, timeSelected, setYear, setMonth, setTimeSelected } =
     useMovementsStore();
-
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   return (
     <>
@@ -61,9 +65,14 @@ export default function Header() {
           <button className="dark:bg-gray-800 px-3 py-1 rounded hover:bg-gray-700">
             Export
           </button>
-          <button className="bg-green-600 px-4 py-1 rounded hover:bg-green-500">
-            New Transaction
-          </button>
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline">New Movement</Button>
+            </PopoverTrigger>
+            <PopoverContent side="bottom" align="end" className="w-[425px] p-6">
+              <NewMovementForm onSuccess={() => setOpen(false)} />
+            </PopoverContent>
+          </Popover>
         </div>
       </header>
     </>

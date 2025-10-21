@@ -51,13 +51,13 @@ describe("useMovementsStore", () => {
 
     expect(state.movementsByYear).toEqual({
       totalIncome: 0,
-      totalOutcome: 0,
+      totalExpense: 0,
       balance: 0,
       months: []
     });
     expect(state.movementsByMonth).toEqual({
       totalIncome: 0,
-      totalOutcome: 0,
+      totalExpense: 0,
       balance: 0,
       days: []
     });
@@ -74,7 +74,7 @@ describe("useMovementsStore", () => {
   it("should fetch movements by year successfully", async () => {
     const fakeData: MovementByYear = {
       totalIncome: 1000,
-      totalOutcome: 500,
+      totalExpense: 500,
       balance: 500,
       months: []
     };
@@ -95,7 +95,7 @@ describe("useMovementsStore", () => {
   it("should fetch movements by month successfully", async () => {
     const fakeData = {
       totalIncome: 200,
-      totalOutcome: 50,
+      totalExpense: 50,
       balance: 150,
       days: []
     };
@@ -137,7 +137,7 @@ describe("useMovementsStore", () => {
   it("should fetch all years movements successfully", async () => {
     const fakeData: MovementByYear = {
       totalIncome: 1000,
-      totalOutcome: 500,
+      totalExpense: 500,
       balance: 500,
       months: []
     };
