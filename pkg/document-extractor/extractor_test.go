@@ -7,22 +7,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
-
-func TestDaviviendaExtractor(t *testing.T) {
+func TestExtractTextFromPDF(t *testing.T) {
 	c := require.New(t)
 
-	prevCommand := currentCommand
-	defer func() { currentCommand = prevCommand }()
+	// Guardar la versión real
+	prevRunCommand := runCommand
+	defer func() { runCommand = prevRunCommand }()
 
-	currentCommand = func(name string, arg ...string) *exec.Cmd {
-		return &exec.Cmd{
-			Path:   name,
-			Args:   append([]string{name}, arg...),
-			Stdout: nil,
-		}
+	// Mock del comando Python (usa cmd /C echo para Windows)
+	runCommand = func(name string, arg ...string) *exec.Cmd {
+		return exec.Command("cmd", "/C", "echo", "Texto simulado desde PDF")
 	}
 
-	_, err := ExtractTextFromPDF("path", "")
+	out, err := ExtractTextFromPDF("dummy.pdf", "1234")
 	c.NoError(err)
+	c.Contains(out, "Texto simulado")
 }
