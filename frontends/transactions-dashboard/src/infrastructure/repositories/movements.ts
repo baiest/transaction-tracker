@@ -6,7 +6,7 @@ import type {
   MovementsResponse
 } from "@/core/entities/Movement";
 import { createFetchClient, API_BASE_URL } from "../http/fetchClient";
-import { FetchClient } from "@/core/entities/FetchClient";
+import { ExtendedBody, FetchClient } from "@/core/entities/FetchClient";
 import { MovementByMonth } from "@/core/entities/Movement.d";
 
 export class MovementsRepository implements IMovementsRepository {

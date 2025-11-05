@@ -89,9 +89,9 @@ export default function MovementForm({
       return;
     }
 
-    toast.success("Movimiento guardado", { position: "top-right" })
+    toast.success("Movimiento guardado", { position: "top-right" });
     onSuccess?.();
-  }, [error, isLoading, isSubmiting, setIsSubmiting]);
+  }, [error, isLoading, isSubmiting, setIsSubmiting, onSuccess]);
 
   return (
     <Form {...form}>
