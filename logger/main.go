@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	lock = &sync.Mutex{}
+	filePath = "logs/app.log"
+	lock     = &sync.Mutex{}
 
 	logger *models.Logger
 )
@@ -18,7 +19,7 @@ func GetLogger(ctx context.Context, serviceName string) (*models.Logger, error) 
 	defer lock.Unlock()
 
 	if logger == nil {
-		service, err := services.NewFmtLogger(ctx, serviceName)
+		service, err := services.NewJSONLogger(ctx, serviceName, filePath)
 		if err != nil {
 			return nil, err
 		}

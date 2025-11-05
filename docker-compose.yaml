@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  # --- API ---
+  api:
+    build:
+      context: .
+      dockerfile: cmd/api/Dockerfile
+    container_name: api
+    env_file:
+      - .env
+    expose:
+      - "8080"
+    restart: always
+    volumes:
+      - ./files:/app/files
+      - ./logs:/app/logs
+    depends_on:
+      mongo:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+
+  # --- Tracker ---
+  tracker:
+    build:
+      context: .
+      dockerfile: cmd/tracker/Dockerfile
+    container_name: tracker
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /app/sa-key.json
+      BASE_TRANSACTION_URL: ${BASE_TRANSACTION_URL}
+    restart: always
+    volumes:
+      - ./files:/app/files
+      - ./logs:/app/logs
+    depends_on:
+      mongo:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+
+  # --- Frontend (Next.js) ---
+  frontend:
+    build:
+      context: ./frontends/transactions-dashboard
+      dockerfile: Dockerfile
+    container_name: transactions-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8080
+    expose:
+      - "3000"
+    restart: always
+    networks:
+      - frontend
+      - backend
+
+  # --- Nginx ---
+  nginx:
+    image: nginx:1.25
+    container_name: transactions-nginx
+    depends_on:
+      - api
+      - frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./logs/nginx:/var/log/nginx
+    restart: always
+    networks:
+      - frontend
+      - backend
+
+# --- Networks ---
+networks:
+  frontend:
+  backend:

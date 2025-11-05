@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: loki
+    user: "10001:10001"
+    volumes:
+      - ./loki.config.yaml:/etc/loki/config.yaml:ro
+      - ./loki-data:/loki
+      - ./loki-wal:/wal
+    command: -config.file=/etc/loki/config.yaml
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+    networks:
+      - backend
+
+
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: promtail
+    volumes:
+      - ./promtail.config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - ./logs:/var/logs
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - backend
+
+  grafana:
+    image: grafana/grafana:9.5.8
+    container_name: grafana
+    env_file:
+      - .env
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - backend
+
+volumes:
+  loki_data:
+  grafana_data:
+
+networks:
+  backend:
+    external: true
+    name: transaction-tracker_backend
