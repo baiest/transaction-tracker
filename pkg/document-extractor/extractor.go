@@ -18,7 +18,6 @@ var (
 	initOnce   sync.Once
 )
 
-// prepareScript crea el script solo una vez y lo reutiliza
 func prepareScript() error {
 	var err error
 	initOnce.Do(func() {
@@ -31,18 +30,15 @@ func prepareScript() error {
 }
 
 func ExtractTextFromPDF(pathPDF string, password string) (string, error) {
-	// Asegurar que el script existe (solo se crea la primera vez)
 	if err := prepareScript(); err != nil {
 		return "", err
 	}
 
-	// Detectar python o python3
 	pythonCmd := "python"
 	if _, err := exec.LookPath("python3"); err == nil {
 		pythonCmd = "python3"
 	}
 
-	// Ejecutar el script con los argumentos
 	cmd := runCommand(pythonCmd, scriptPath, pathPDF, password)
 	out, err := cmd.CombinedOutput()
 	if err != nil {

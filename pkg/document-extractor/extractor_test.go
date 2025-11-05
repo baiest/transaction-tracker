@@ -10,11 +10,9 @@ import (
 func TestExtractTextFromPDF(t *testing.T) {
 	c := require.New(t)
 
-	// Guardar la versión real
 	prevRunCommand := runCommand
 	defer func() { runCommand = prevRunCommand }()
 
-	// Mock del comando Python (usa cmd /C echo para Windows)
 	runCommand = func(name string, arg ...string) *exec.Cmd {
 		return exec.Command("cmd", "/C", "echo", "Texto simulado desde PDF")
 	}
