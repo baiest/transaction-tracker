@@ -139,7 +139,7 @@ func (h *AccountHandler) Refresh(c *gin.Context) {
 			Error: err,
 			AdditionalParams: []loggerModels.Properties{
 				logger.MapToProperties(map[string]string{
-					"id": id,
+					"account_id": id,
 				}),
 			},
 		})

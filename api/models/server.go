@@ -25,7 +25,7 @@ func NewServer(accountUsecase usecase.AccountsUsecase, port int) *Server {
 	engine.Use(RecoveryWithJSON())
 
 	engine.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:8080"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -129,11 +129,12 @@ func (s *Server) AddRoutes(routes []Route) {
 		groupPublic := api.Group(r.ApiVersion)
 		groupPrivate := api.Group(r.ApiVersion, s.AuthMiddleware())
 
+		group := groupPrivate
 		if r.NoRequiresAuth {
-			groupPublic.Handle(string(r.Method), r.Endpoint, r.HandlerFunc)
-		} else {
-			groupPrivate.Handle(string(r.Method), r.Endpoint, r.HandlerFunc)
+			group = groupPublic
 		}
+
+		group.Handle(string(r.Method), r.Endpoint, r.HandlerFunc)
 	}
 }
 
