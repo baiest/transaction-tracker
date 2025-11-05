@@ -102,7 +102,7 @@ func (r *postgresRepository) GetMovementsByAccountID(ctx context.Context, accoun
 	ORDER BY date DESC
 	LIMIT $2 OFFSET $3`
 
-	rows, err := r.db.Query(ctx, query, accountID, limit, offset)
+	rows, err := r.db.Query(ctx, query, accountID, limit, offset*limit)
 	if err != nil {
 		return nil, err
 	}

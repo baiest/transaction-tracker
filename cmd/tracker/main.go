@@ -225,7 +225,7 @@ func main() {
 
 	var err error
 
-	log, err = logger.GetLogger(ctx, "transaction-tracker")
+	log, err = logger.GetLogger(ctx, "tracker")
 	if err != nil {
 		fmt.Printf("Error getting logger: %v\n", err)
 

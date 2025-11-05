@@ -1,4 +1,4 @@
-type ExtendedBody = BodyInit | Record<string, any> | null | undefined;
+type ExtendedBody = BodyInit | object | null | undefined;
 
 export interface ExtendedRequestInit extends Omit<RequestInit, "body"> {
   body?: ExtendedBody;
