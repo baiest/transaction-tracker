@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -86,6 +87,25 @@ type Movement struct {
 	Category      MovementCategory `json:"category" bson:"category"`
 	CreatedAt     time.Time        `json:"created_at" bson:"created_at"`
 	UpdatedAt     time.Time        `json:"updated_at" bson:"updated_at"`
+}
+
+// LogProperties is the map to logger attibutes
+func (m *Movement) LogProperties() map[string]string {
+	return map[string]string{
+		"id":             m.ID,
+		"account_id":     m.AccountID,
+		"institution_id": m.InstitutionID,
+		"message_id":     m.MessageID,
+		"extract_id":     m.ExtractID,
+		"description":    m.Description,
+		"amount":         strconv.FormatFloat(m.Amount, 'f', 2, 64),
+		"type":           string(m.Type),
+		"date":           m.Date.Local().String(),
+		"source":         string(m.Source),
+		"category":       string(m.Category),
+		"created_at":     m.CreatedAt.Local().String(),
+		"updated_at":     m.UpdatedAt.Local().String(),
+	}
 }
 
 // PaginatedMovements is the structure that encapsulates paginated movements and pagination information.

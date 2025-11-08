@@ -2,6 +2,7 @@ package documentextractor
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -35,14 +36,19 @@ func ExtractTextFromPDF(pathPDF string, password string) (string, error) {
 	}
 
 	pythonCmd := "python"
+
 	if _, err := exec.LookPath("python3"); err == nil {
 		pythonCmd = "python3"
+	}
+
+	if _, err := exec.LookPath("py"); err == nil {
+		pythonCmd = "py"
 	}
 
 	cmd := runCommand(pythonCmd, scriptPath, pathPDF, password)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error running python script: %w", err)
 	}
 
 	return string(out), nil

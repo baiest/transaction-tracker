@@ -23,20 +23,24 @@ import (
 )
 
 type EmailFilter struct {
-	Email   string
-	Subject string
+	Email         string
+	Subject       string
+	InstitutionID string
 }
 
 var (
 	emailFilters = []EmailFilter{
 		{
-			Email: "banco_davivienda@davivienda.com",
+			Email:         "banco_davivienda@davivienda.com",
+			InstitutionID: "davivienda",
 		},
 		{
-			Email: "bancodavivienda@davivienda.com",
+			Email:         "bancodavivienda@davivienda.com",
+			InstitutionID: "davivienda",
 		},
 		{
-			Email: "juanballesteros2001@gmail.com",
+			Email:         "juanballesteros2001@gmail.com",
+			InstitutionID: "manual",
 		},
 	}
 
@@ -173,7 +177,7 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, gmailServi
 		}
 	}
 
-	messageType, isSupported := isMessageFiltered(emailMessage)
+	messageType, institutionID, isSupported := isMessageFiltered(emailMessage)
 
 	if !isSupported {
 		u.log.Error(loggerModels.LogProperties{
@@ -203,7 +207,7 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, gmailServi
 		return err
 	}
 
-	mvmExtractor, err := messageextractor.NewMovementExtractor("davivienda", string(decodedBody), messageType)
+	mvmExtractor, err := messageextractor.NewMovementExtractor(institutionID, string(decodedBody), messageType)
 	if err != nil {
 		u.log.Error(loggerModels.LogProperties{
 			Event: "create_extractor_failed",
@@ -261,7 +265,16 @@ func (u *messageUsecase) filterAndUpdateMovement(ctx context.Context, gmailServi
 			if !errors.Is(err, movementsUsecase.ErrMustBeGreaterThanZero) {
 				message.Status = domain.Failure
 			}
+
+			continue
 		}
+
+		u.log.Info(loggerModels.LogProperties{
+			Event: "movement_created",
+			AdditionalParams: []loggerModels.Properties{
+				m,
+			},
+		})
 	}
 
 	if message.Status == domain.Pending {
@@ -299,6 +312,14 @@ func (u *messageUsecase) GetExtract(ctx context.Context, gmailService google.Gma
 
 	month, year, filePath, err := gmailService.DownloadAttachments(ctx, extract.AccountID, message.ExternalID)
 	if err != nil {
+		u.log.Error(loggerModels.LogProperties{
+			Event: "download_attachments_failed",
+			Error: err,
+			AdditionalParams: []loggerModels.Properties{
+				extract,
+			},
+		})
+
 		errUpdate := u.extractUsecase.Update(ctx, extract)
 		if errUpdate != nil {
 			return nil, errUpdate
@@ -312,11 +333,18 @@ func (u *messageUsecase) GetExtract(ctx context.Context, gmailService google.Gma
 	extract.Path = filePath
 	extract.Status = extractsDomain.ExtractStatusPending
 
+	u.log.Info(loggerModels.LogProperties{
+		Event: "extract_downloaded",
+		AdditionalParams: []loggerModels.Properties{
+			extract,
+		},
+	})
+
 	return extract, nil
 }
 
 // Review this
-func isMessageFiltered(msg *gmail.Message) (messageextractor.MessageType, bool) {
+func isMessageFiltered(msg *gmail.Message) (messageextractor.MessageType, string, bool) {
 	var from, subject string
 	if msg.Payload != nil && msg.Payload.Headers != nil {
 		for _, header := range msg.Payload.Headers {
@@ -331,6 +359,7 @@ func isMessageFiltered(msg *gmail.Message) (messageextractor.MessageType, bool) 
 	}
 
 	messageType := messageextractor.Unknown
+	var institucionID string
 
 	if strings.Contains(strings.ToLower(subject), "extractos") {
 		messageType = messageextractor.Extract
@@ -342,11 +371,11 @@ func isMessageFiltered(msg *gmail.Message) (messageextractor.MessageType, bool) 
 
 	for _, filter := range emailFilters {
 		if strings.Contains(strings.ToLower(from), filter.Email) {
-			return messageType, true
+			return messageType, institucionID, true
 		}
 	}
 
-	return messageType, false
+	return messageType, institucionID, false
 }
 
 func (u *messageUsecase) updateMessage(ctx context.Context, message *domain.Message, err error) (*domain.Message, error) {

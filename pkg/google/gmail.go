@@ -130,10 +130,12 @@ func (g *gmailService) saveAttachment(accountID, fileName string, data []byte, p
 	// Sanitize accountID to prevent path traversal.
 	safeAccountID := filepath.Clean(filepath.Base(accountID))
 
-	exePath, _ := os.Getwd()
-	currentDir := filepath.Dir(exePath)
+	exePath, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("error getting executable path: %w", err)
+	}
 
-	dirPath := filepath.Join(currentDir, fmt.Sprintf(extractsFolder, safeAccountID), fmt.Sprintf("%d", time.Now().Year()))
+	dirPath := filepath.Join(exePath, fmt.Sprintf(extractsFolder, safeAccountID), fmt.Sprintf("%d", time.Now().Year()))
 
 	if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
 		return "", fmt.Errorf("error creating directory: %w", err)

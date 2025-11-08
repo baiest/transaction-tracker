@@ -31,8 +31,9 @@ func (u *movementUsecase) CreateMovement(ctx context.Context, movement *domain.M
 		return errors.New("movement cannot be nil")
 	}
 
-	// TODO: remove this
-	movement.InstitutionID = "remove this"
+	if movement.InstitutionID == "" {
+		return errors.New("institution ID is required")
+	}
 
 	if movement.AccountID == "" {
 		return errors.New("account ID is required")
