@@ -1,0 +1,58 @@
+# ----------------------------------------------------------------------
+# Generated Artifacts and Binaries (MUST BE IGNORED)
+# ----------------------------------------------------------------------
+
+# 1. Machine Learning Models and Output
+# Exclude the directory containing the trained models (large binary files).
+# The 'models' directory contains clf.joblib, label_encoder.joblib, and the embedder.
+models/
+
+# Exclude the data directory (often contains large raw files like dataset.jsonl).
+# Uncomment the line below if you want to include the 'data/' directory in version control.
+# !data/dataset.jsonl
+data/
+
+# Results, logs, and plots
+*.log
+*.csv.zip
+results/
+plots/
+
+# ----------------------------------------------------------------------
+# Python Environment and Cache
+# ----------------------------------------------------------------------
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Python cache and temporary files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+
+# Packaging and Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Testing and Coverage
+.pytest_cache/
+.coverage
+
+# ----------------------------------------------------------------------
+# IDE and OS Files
+# ----------------------------------------------------------------------
+
+# Operating System Files
+.DS_Store # macOS
+Thumbs.db # Windows
+
+# IDE/Editor Files (e.g., VS Code, PyCharm)
+.vscode/
+.idea/
+
+# Jupyter/IPython Notebook Files
+.ipynb_checkpoints

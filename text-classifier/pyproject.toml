@@ -1,0 +1,27 @@
+[project]
+name = "text-classifier"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Juan Ballesteros",email = "juanballesteros2001@gmail.com"}
+]
+readme = "README.md"
+package-mode = false
+requires-python = ">=3.11"
+dependencies = [
+    "sentence-transformers (==2.2.2)",
+    "scikit-learn (==1.3.2)",
+    "pandas (==2.2.3)",
+    "uvicorn (==0.22.0)",
+    "pydantic (==1.10.12)",
+    "joblib (==1.3.2)",
+    "fastapi (==0.110.0)",
+    "python-multipart (==0.0.9)",
+    "huggingface-hub (==0.19.4)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+package-mode = false
