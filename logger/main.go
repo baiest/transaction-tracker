@@ -29,6 +29,8 @@ func GetLogger(ctx context.Context, serviceName string) (*models.Logger, error) 
 		}
 	}
 
+	logger.Service.SetService(serviceName)
+
 	return logger, nil
 }
 
