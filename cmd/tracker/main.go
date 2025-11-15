@@ -206,7 +206,7 @@ func NewSubscriptionsecase(ctx context.Context) (*subscriptionUsecase, error) {
 	accUsecase := accountsUsecase.NewAccountsUseCase(googleClient, accRepo)
 
 	movementsRepo := movementsRepository.NewPostgresRepository(dbClient.GetPool())
-	mvmUsecase := movementsUsecase.NewMovementUsecase(movementsRepo)
+	mvmUsecase := movementsUsecase.NewMovementUsecase(ctx, movementsRepo)
 
 	extractsRepo := extractsRepository.NewExtractsRepository(extractsCollection)
 	extractUsecase := extractsUsecase.NewExtractsUsecase(googleClient, extractsRepo)
