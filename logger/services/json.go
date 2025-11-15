@@ -73,3 +73,7 @@ func (l *JSONLogger) Log(level string, props models.LogProperties) {
 func (l *JSONLogger) Close() error {
 	return l.file.Close()
 }
+
+func (l *JSONLogger) SetService(serviceName string) {
+	l.ServiceName = serviceName
+}

@@ -12,6 +12,7 @@ type LogProperties struct {
 
 type LogService interface {
 	Log(string, LogProperties)
+	SetService(string)
 }
 
 type Logger struct {

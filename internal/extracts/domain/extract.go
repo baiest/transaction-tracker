@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,6 +31,21 @@ type Extract struct {
 	Status        ExtractStatus `bson:"status" json:"status"`
 	CreatedAt     time.Time     `bson:"created_at" json:"created_at"`
 	UpdatedAt     time.Time     `bson:"updated_at" json:"updated_at"`
+}
+
+func (e *Extract) LogProperties() map[string]string {
+	return map[string]string{
+		"id":             e.ID,
+		"account_id":     e.AccountID,
+		"message_id":     e.MessageID,
+		"institution_id": e.InstitutionID,
+		"month":          e.Month.String(),
+		"year":           strconv.Itoa(e.Year),
+		"path":           e.Path,
+		"status":         string(e.Status),
+		"created_at":     e.CreatedAt.Local().String(),
+		"updated_at":     e.UpdatedAt.Local().String(),
+	}
 }
 
 func NewExtract(accountID string, messageID string, institutionID string, path string, month time.Month, year int) *Extract {

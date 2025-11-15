@@ -46,8 +46,12 @@ func NewClient(ctx context.Context) (context.Context, *MongoClient, error) {
 		return ctx, nil, fmt.Errorf("error creating mongo client: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
+	if err := _client.Ping(pingCtx, nil); err != nil {
+		return ctx, nil, fmt.Errorf("mongo ping failed: %w", err)
+	}
 
 	return ctx, &MongoClient{client: _client}, nil
 }

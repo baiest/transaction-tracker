@@ -53,7 +53,7 @@ func main() {
 	}
 
 	movementRepo := movementRepostiroy.NewPostgresRepository(dbClient.GetPool())
-	movementUsecase := movementUsecase.NewMovementUsecase(movementRepo)
+	movementUsecase := movementUsecase.NewMovementUsecase(ctx, movementRepo)
 	movementHandler := handler.NewMovementHandler(movementUsecase)
 
 	googleClient, err := google.NewGoogleClient(ctx)

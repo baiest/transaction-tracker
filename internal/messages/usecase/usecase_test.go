@@ -52,7 +52,8 @@ func TestIsMessageFiltered(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			msg := &gmail.Message{Payload: &gmail.MessagePart{Headers: tt.headers}}
-			gotType, gotFilter := isMessageFiltered(msg)
+			gotType, institutionID, gotFilter := isMessageFiltered(msg)
+			c.Equal("davivienda", institutionID)
 			c.Equal(tt.wantType, gotType)
 			c.Equal(tt.wantFilter, gotFilter)
 		})
