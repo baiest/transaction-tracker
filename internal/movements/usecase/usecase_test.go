@@ -17,7 +17,7 @@ func TestCreateMovement(t *testing.T) {
 	c := require.New(t)
 	mockRepo := new(repository.MockMovementRepository)
 
-	u := NewMovementUsecase(mockRepo)
+	u := NewMovementUsecase(context.Background(), mockRepo)
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestCreateMovement(t *testing.T) {
 func TestCreateMovementWithRepositoryError(t *testing.T) {
 	c := require.New(t)
 	mockRepo := new(repository.MockMovementRepository)
-	usecase := NewMovementUsecase(mockRepo)
+	usecase := NewMovementUsecase(context.Background(), mockRepo)
 	ctx := context.Background()
 
 	testMovement := &domain.Movement{
@@ -138,7 +138,7 @@ func TestCreateMovementWithRepositoryError(t *testing.T) {
 func TestGetMovementByID(t *testing.T) {
 	c := require.New(t)
 	mockRepo := new(repository.MockMovementRepository)
-	usecase := NewMovementUsecase(mockRepo)
+	usecase := NewMovementUsecase(context.Background(), mockRepo)
 	ctx := context.Background()
 	testID := uuid.New().String()
 	expectedMovement := &domain.Movement{ID: testID, AccountID: "acc1"}
@@ -155,7 +155,7 @@ func TestGetMovementByID(t *testing.T) {
 func TestGetMovementByIDWithRepositoryError(t *testing.T) {
 	c := require.New(t)
 	mockRepo := new(repository.MockMovementRepository)
-	usecase := NewMovementUsecase(mockRepo)
+	usecase := NewMovementUsecase(context.Background(), mockRepo)
 	ctx := context.Background()
 	testID := uuid.New().String()
 
@@ -169,7 +169,7 @@ func TestGetMovementByIDWithRepositoryError(t *testing.T) {
 func TestGetMovementsByAccountID(t *testing.T) {
 	c := require.New(t)
 	mockRepo := new(repository.MockMovementRepository)
-	usecase := NewMovementUsecase(mockRepo)
+	usecase := NewMovementUsecase(context.Background(), mockRepo)
 	ctx := context.Background()
 
 	testAccountID := uuid.New().String()
@@ -199,7 +199,7 @@ func TestGetMovementsByAccountID(t *testing.T) {
 func TestGetMovementsByAccountIDWithRepositoryError(t *testing.T) {
 	c := require.New(t)
 	mockRepo := new(repository.MockMovementRepository)
-	usecase := NewMovementUsecase(mockRepo)
+	usecase := NewMovementUsecase(context.Background(), mockRepo)
 	ctx := context.Background()
 	testAccountID := uuid.New().String()
 

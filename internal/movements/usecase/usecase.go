@@ -1,12 +1,25 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"os"
 	"time"
 	"transaction-tracker/internal/movements/domain"
 	"transaction-tracker/internal/movements/repository"
+	"transaction-tracker/logger"
+	loggerModels "transaction-tracker/logger/models"
+	"transaction-tracker/shared"
 )
+
+type ClassifyResponse struct {
+	Category   string  `json:"category"`
+	Confidence float64 `json:"confidence"`
+}
 
 var (
 	ErrMovementNotFound      = errors.New("movement not found")
@@ -15,13 +28,17 @@ var (
 
 type movementUsecase struct {
 	movementRepo repository.MovementRepository
+	log          *loggerModels.Logger
 }
 
 // NewMovementUsecase is the constructor for the use case implementation.
 // It receives a repository interface as a dependency.
-func NewMovementUsecase(repo repository.MovementRepository) MovementUsecase {
+func NewMovementUsecase(ctx context.Context, repo repository.MovementRepository) MovementUsecase {
+	log, _ := logger.GetLogger(ctx, "movements-usecase")
+
 	return &movementUsecase{
 		movementRepo: repo,
+		log:          log,
 	}
 }
 
@@ -59,6 +76,15 @@ func (u *movementUsecase) CreateMovement(ctx context.Context, movement *domain.M
 
 	if movement.Date.After(time.Now()) {
 		return errors.New("movement date cannot be in the future")
+	}
+
+	movement.Category = domain.Unknown
+
+	if movement.Description != "" {
+		err = u.ClassifyCategoryFromDescription(ctx, movement)
+		if err != nil {
+			return err
+		}
 	}
 
 	return u.movementRepo.CreateMovement(ctx, movement)
@@ -161,4 +187,53 @@ func (u *movementUsecase) GetMovementsByMonth(ctx context.Context, accountID str
 
 func (u *movementUsecase) DeleteMovementsByExtractID(ctx context.Context, extractID string) error {
 	return u.movementRepo.DeleteMovementsByExtractID(ctx, extractID)
+}
+
+func (u *movementUsecase) ClassifyCategoryFromDescription(ctx context.Context, movement *domain.Movement) error {
+	payload := map[string]interface{}{
+		"description": movement.Description,
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", os.Getenv("CLASSIFY_CATEGORY_URL"), bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	res, err := shared.Client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("error classifying category: status %d", res.StatusCode)
+	}
+
+	cr := ClassifyResponse{}
+	err = json.NewDecoder(res.Body).Decode(&cr)
+	if err != nil {
+		return err
+	}
+
+	u.log.Info(loggerModels.LogProperties{
+		Event: "category_classified",
+		AdditionalParams: []loggerModels.Properties{
+			logger.MapToProperties(map[string]string{
+				"confidence": string(fmt.Sprintf("%.2f", cr.Confidence)),
+				"category":   cr.Category,
+			}),
+		},
+	})
+
+	movement.Category = domain.MovementCategory(cr.Category)
+
+	return nil
 }
