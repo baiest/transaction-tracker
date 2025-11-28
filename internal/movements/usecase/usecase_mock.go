@@ -37,11 +37,11 @@ func (m *MockMovementUsecase) GetMovementByID(ctx context.Context, id string, ac
 	return movement, args.Error(1)
 }
 
-func (m *MockMovementUsecase) GetMovementsByAccountID(ctx context.Context, accountID string, limit int, offset int) ([]*domain.Movement, error) {
+func (m *MockMovementUsecase) GetMovementsByAccountID(ctx context.Context, accountID string, institutionIDs []string, limit int, offset int) ([]*domain.Movement, error) {
 	if m == nil {
 		return nil, nil
 	}
-	args := m.Called(ctx, accountID, limit, offset)
+	args := m.Called(ctx, accountID, institutionIDs, limit, offset)
 
 	var movements []*domain.Movement
 	if val := args.Get(0); val != nil {
@@ -93,11 +93,11 @@ func (m *MockMovementUsecase) DeleteMovement(ctx context.Context, id string, acc
 	return args.Error(0)
 }
 
-func (m *MockMovementUsecase) GetMovementsByYear(ctx context.Context, accountID string, year int) ([]*domain.Movement, error) {
+func (m *MockMovementUsecase) GetMovementsByYear(ctx context.Context, accountID string, institutionIDs []string, year int) ([]*domain.Movement, error) {
 	if m == nil {
 		return nil, nil
 	}
-	args := m.Called(ctx, accountID, year)
+	args := m.Called(ctx, accountID, institutionIDs, year)
 
 	var movements []*domain.Movement
 	if val := args.Get(0); val != nil {
@@ -108,11 +108,11 @@ func (m *MockMovementUsecase) GetMovementsByYear(ctx context.Context, accountID 
 	return movements, args.Error(1)
 }
 
-func (m *MockMovementUsecase) GetMovementsByMonth(ctx context.Context, accountID string, year int, month int) ([]*domain.Movement, error) {
+func (m *MockMovementUsecase) GetMovementsByMonth(ctx context.Context, accountID string, institutionIDs []string, year int, month int) ([]*domain.Movement, error) {
 	if m == nil {
 		return nil, nil
 	}
-	args := m.Called(ctx, accountID, year, month)
+	args := m.Called(ctx, accountID, institutionIDs, year, month)
 
 	var movements []*domain.Movement
 	if val := args.Get(0); val != nil {
@@ -123,12 +123,12 @@ func (m *MockMovementUsecase) GetMovementsByMonth(ctx context.Context, accountID
 	return movements, args.Error(1)
 }
 
-func (m *MockMovementUsecase) GetPaginatedMovementsByAccountID(ctx context.Context, accountID string, limit int, offset int) (*domain.PaginatedMovements, error) {
+func (m *MockMovementUsecase) GetPaginatedMovementsByAccountID(ctx context.Context, accountID string, institutionIDs []string, limit int, offset int) (*domain.PaginatedMovements, error) {
 	if m == nil {
 		return nil, nil
 	}
 
-	args := m.Called(ctx, accountID, limit, offset)
+	args := m.Called(ctx, accountID, institutionIDs, limit, offset)
 
 	var movements *domain.PaginatedMovements
 	if val := args.Get(0); val != nil {

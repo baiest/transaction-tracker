@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 	"transaction-tracker/api/models"
 	"transaction-tracker/internal/movements/domain"
@@ -26,6 +27,10 @@ func NewMovementHandler(ucm usecase.MovementUsecase) *MovementHandler {
 	}
 }
 
+func splitInstitutionIDs(raw string) []string {
+	return strings.Split(raw, ",")
+}
+
 // GetMovements handles the GET /movements request.
 func (h *MovementHandler) GetMovements(c *gin.Context) {
 	log, account, err := getContextDependencies(c)
@@ -45,7 +50,14 @@ func (h *MovementHandler) GetMovements(c *gin.Context) {
 		limit = 10
 	}
 
-	movements, err := h.movementsUsecase.GetPaginatedMovementsByAccountID(c.Request.Context(), account.ID, int(limit), int(page))
+	var institutionIDs []string
+
+	raw := c.Query("institution_ids")
+	if raw != "" {
+		institutionIDs = splitInstitutionIDs(raw)
+	}
+
+	movements, err := h.movementsUsecase.GetPaginatedMovementsByAccountID(c.Request.Context(), account.ID, institutionIDs, int(limit), int(page))
 	if err != nil {
 		log.Error(loggerModels.LogProperties{
 			Event: "get_movements_failed",
@@ -130,7 +142,10 @@ func (h *MovementHandler) CreateMovement(c *gin.Context) {
 
 	movement := models.ToDomainMovement(req)
 
-	if err := h.movementsUsecase.CreateMovement(c.Request.Context(), movement); err != nil {
+	movement.InstitutionID = "manual"
+
+	err = h.movementsUsecase.CreateMovement(c.Request.Context(), movement)
+	if err != nil {
 		if errors.Is(err, domain.ErrInvalidMovementType) || errors.Is(err, domain.ErrInvalidMovementCategory) {
 			models.NewResponseInvalidRequest(c, models.Response{Message: err.Error()})
 			return
@@ -139,6 +154,9 @@ func (h *MovementHandler) CreateMovement(c *gin.Context) {
 		log.Error(loggerModels.LogProperties{
 			Event: "create_movement_failed",
 			Error: err,
+			AdditionalParams: []loggerModels.Properties{
+				movement,
+			},
 		})
 
 		models.NewResponseInternalServerError(c)
@@ -205,7 +223,14 @@ func (h *MovementHandler) GetMovementsByYear(c *gin.Context) {
 		return
 	}
 
-	movements, err := h.movementsUsecase.GetMovementsByYear(c.Request.Context(), account.ID, year)
+	var institutionIDs []string
+
+	raw := c.Query("institution_ids")
+	if raw != "" {
+		institutionIDs = splitInstitutionIDs(raw)
+	}
+
+	movements, err := h.movementsUsecase.GetMovementsByYear(c.Request.Context(), account.ID, institutionIDs, year)
 	if err != nil {
 		log.Error(loggerModels.LogProperties{
 			Event: "get_movements_by_year_failed",
@@ -310,7 +335,14 @@ func (h *MovementHandler) GetMovementsByMonth(c *gin.Context) {
 		return
 	}
 
-	movements, err := h.movementsUsecase.GetMovementsByMonth(c.Request.Context(), account.ID, year, month)
+	var institutionIDs []string
+
+	raw := c.Query("institution_ids")
+	if raw != "" {
+		institutionIDs = splitInstitutionIDs(raw)
+	}
+
+	movements, err := h.movementsUsecase.GetMovementsByMonth(c.Request.Context(), account.ID, institutionIDs, year, month)
 	if err != nil {
 		log.Error(loggerModels.LogProperties{
 			Event: "get_movements_by_month_failed",

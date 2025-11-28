@@ -182,13 +182,13 @@ func TestGetMovementsByAccountID(t *testing.T) {
 	limit := 10
 	offset := 0
 
-	mockRepo.On("GetMovementsByAccountID", ctx, testAccountID, limit, offset).
+	mockRepo.On("GetMovementsByAccountID", ctx, testAccountID, []string{}, limit, offset).
 		Return(expectedMovements, nil).Once()
 
 	mockRepo.On("GetTotalMovementsByAccountID", ctx, testAccountID).
 		Return(len(expectedMovements), nil)
 
-	foundMovements, err := usecase.GetPaginatedMovementsByAccountID(ctx, testAccountID, limit, offset)
+	foundMovements, err := usecase.GetPaginatedMovementsByAccountID(ctx, testAccountID, []string{}, limit, offset)
 	c.NoError(err)
 	c.NotNil(foundMovements)
 	c.Equal(len(expectedMovements), len(foundMovements.Movements))
@@ -206,13 +206,13 @@ func TestGetMovementsByAccountIDWithRepositoryError(t *testing.T) {
 	limit := 10
 	offset := 0
 
-	mockRepo.On("GetMovementsByAccountID", ctx, testAccountID, limit, offset).
+	mockRepo.On("GetMovementsByAccountID", ctx, testAccountID, []string{}, limit, offset).
 		Return(nil, errors.New("db error")).Once()
 
 	mockRepo.On("GetTotalMovementsByAccountID", ctx, testAccountID).
 		Return(1, nil)
 
-	foundMovements, err := usecase.GetPaginatedMovementsByAccountID(ctx, testAccountID, limit, offset)
+	foundMovements, err := usecase.GetPaginatedMovementsByAccountID(ctx, testAccountID, []string{}, limit, offset)
 	c.Error(err)
 	c.Nil(foundMovements)
 

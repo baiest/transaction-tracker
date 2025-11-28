@@ -40,5 +40,11 @@ func AccountRoutes(h *handler.AccountHandler) []models.Route {
 			HandlerFunc: h.DeleteWatcher,
 			ApiVersion:  API_VERSION,
 		},
+		{
+			Endpoint:    "/accounts/me",
+			Method:      models.GET,
+			HandlerFunc: h.GetAccount,
+			ApiVersion:  API_VERSION,
+		},
 	}
 }
