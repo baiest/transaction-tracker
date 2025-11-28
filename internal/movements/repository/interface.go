@@ -11,6 +11,6 @@ type MovementRepository interface {
 	GetMovementByID(ctx context.Context, id string, accountID string) (*domain.Movement, error)
 	Delete(ctx context.Context, id string, accountID string) error
 	GetTotalMovementsByAccountID(ctx context.Context, accountID string) (int, error)
-	GetMovementsByAccountID(ctx context.Context, accountID string, limit int, offset int) ([]*domain.Movement, error)
+	GetMovementsByAccountID(ctx context.Context, accountID string, institutionIDs []string, limit int, offset int) ([]*domain.Movement, error)
 	DeleteMovementsByExtractID(ctx context.Context, extractID string) error
 }

@@ -43,6 +43,7 @@ func (r *postgresRepository) CreateMovement(ctx context.Context, movement *domai
 	account_id,
 	institution_id,
 	message_id,
+	notification_id,
 	description,
 	amount,
 	type,
@@ -51,12 +52,13 @@ func (r *postgresRepository) CreateMovement(ctx context.Context, movement *domai
 	category,
 	created_at,
 	updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
 	_, err := r.db.Exec(ctx, query,
 		movement.ID,
 		movement.AccountID,
 		movement.InstitutionID,
 		movement.MessageID,
+		movement.ExtractID,
 		movement.Description,
 		movement.Amount,
 		movement.Type,
@@ -72,7 +74,7 @@ func (r *postgresRepository) CreateMovement(ctx context.Context, movement *domai
 // GetMovementByID gets a movement by ID.
 func (r *postgresRepository) GetMovementByID(ctx context.Context, id string, accountID string) (*domain.Movement, error) {
 	query := `SELECT
-	id, account_id, institution_id, message_id, description, amount, type, date, source, category, created_at, updated_at
+	id, account_id, institution_id, message_id, notification_id, description, amount, type, date, source, category, created_at, updated_at
 	FROM movements
 	WHERE id = $1 AND account_id = $2`
 
@@ -94,15 +96,16 @@ func (r *postgresRepository) GetTotalMovementsByAccountID(ctx context.Context, a
 }
 
 // GetMovementsByAccountID gets a user's movements with pagination.
-func (r *postgresRepository) GetMovementsByAccountID(ctx context.Context, accountID string, limit int, offset int) ([]*domain.Movement, error) {
+func (r *postgresRepository) GetMovementsByAccountID(ctx context.Context, accountID string, institutionIDs []string, limit int, offset int) ([]*domain.Movement, error) {
 	query := `SELECT
-		id, account_id, institution_id, message_id, description, amount, type, date, source, category, created_at, updated_at
+		id, account_id, institution_id, message_id, notification_id, description, amount, type, date, source, category, created_at, updated_at
 	FROM movements
 	WHERE account_id = $1
+    AND ($2::text[] IS NULL OR institution_id = ANY($2))
 	ORDER BY date DESC
-	LIMIT $2 OFFSET $3`
+	LIMIT $3 OFFSET $4`
 
-	rows, err := r.db.Query(ctx, query, accountID, limit, offset*limit)
+	rows, err := r.db.Query(ctx, query, accountID, institutionIDs, limit, offset*limit)
 	if err != nil {
 		return nil, err
 	}
@@ -129,12 +132,12 @@ func (r *postgresRepository) GetMovementsByAccountID(ctx context.Context, accoun
 func scanToMovement(scanFn func(...any) error) (*domain.Movement, error) {
 	m := &domain.Movement{}
 
-	var institutionID, messageID, description, source *string
+	var institutionID, messageID, extractID, description, source *string
 	var date, createdAt, updatedAt *time.Time
 	var movementType, category string
 
 	err := scanFn(
-		&m.ID, &m.AccountID, &institutionID, &messageID, &description, &m.Amount,
+		&m.ID, &m.AccountID, &institutionID, &messageID, &extractID, &description, &m.Amount,
 		&movementType, &date, &source, &category, &createdAt, &updatedAt,
 	)
 
@@ -152,6 +155,10 @@ func scanToMovement(scanFn func(...any) error) (*domain.Movement, error) {
 
 	if messageID != nil {
 		m.MessageID = *messageID
+	}
+
+	if extractID != nil {
+		m.ExtractID = *extractID
 	}
 
 	if description != nil {

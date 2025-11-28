@@ -82,9 +82,9 @@ func TestGetMovementsByAccountID_Success(t *testing.T) {
 		{ID: "2"},
 	}
 
-	mockRepo.On("GetMovementsByAccountID", ctx, "acc-001", 10, 0).Return(movements, nil)
+	mockRepo.On("GetMovementsByAccountID", ctx, "acc-001", []string{}, 10, 0).Return(movements, nil)
 
-	result, err := mockRepo.GetMovementsByAccountID(ctx, "acc-001", 10, 0)
+	result, err := mockRepo.GetMovementsByAccountID(ctx, "acc-001", []string{}, 10, 0)
 	require.NoError(t, err)
 	require.Equal(t, movements, result)
 
@@ -93,7 +93,7 @@ func TestGetMovementsByAccountID_Success(t *testing.T) {
 
 func TestGetMovementsByAccountID_NilRepo(t *testing.T) {
 	var mockRepo *MockMovementUsecase
-	result, err := mockRepo.GetMovementsByAccountID(context.Background(), "acc", 10, 0)
+	result, err := mockRepo.GetMovementsByAccountID(context.Background(), "acc", []string{}, 10, 0)
 	require.Nil(t, result)
 	require.NoError(t, err)
 }
