@@ -29,6 +29,17 @@ func (h *AccountHandler) GoogleGenerateAuthLink(c *gin.Context) {
 	})
 }
 
+func (h *AccountHandler) GetAccount(c *gin.Context) {
+	_, account, err := getContextDependencies(c)
+	if err != nil {
+		return
+	}
+
+	models.NewResponseOK(c, models.Response{
+		Data: account,
+	})
+}
+
 func (h *AccountHandler) SaveLogin(c *gin.Context) {
 	l, ok := c.Get("logger")
 	if !ok {

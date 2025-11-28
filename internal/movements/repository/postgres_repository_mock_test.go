@@ -46,9 +46,9 @@ func TestMockMovementRepository_GetMovementsByAccountID(t *testing.T) {
 		{ID: "mov2"},
 	}
 
-	mockRepo.On("GetMovementsByAccountID", ctx, "acc1", 10, 0).Return(expectedMovements, nil)
+	mockRepo.On("GetMovementsByAccountID", ctx, "acc1", []string{}, 10, 0).Return(expectedMovements, nil)
 
-	result, err := mockRepo.GetMovementsByAccountID(ctx, "acc1", 10, 0)
+	result, err := mockRepo.GetMovementsByAccountID(ctx, "acc1", []string{}, 10, 0)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)

@@ -45,6 +45,7 @@ func TestCreateMovement(t *testing.T) {
 		ID:            uuid.New().String(),
 		AccountID:     "acc1",
 		InstitutionID: "inst1",
+		ExtractID:     "exi1",
 		MessageID:     "mid1",
 		Description:   "Test Description",
 		Amount:        1000.0,
@@ -62,6 +63,7 @@ func TestCreateMovement(t *testing.T) {
 			movement.AccountID,
 			movement.InstitutionID,
 			movement.MessageID,
+			movement.ExtractID,
 			movement.Description,
 			movement.Amount,
 			movement.Type,
@@ -87,15 +89,16 @@ func TestGetMovementByID(t *testing.T) {
 	now := time.Now()
 	instID := "inst1"
 	messaID := "mid1"
+	notificaaationID := "noti1"
 	desc := "Test Desc"
 	amount := float64(1000.0)
 	date := now
 	source := "card"
 	cat := "groceries"
 
-	columns := []string{"id", "account_id", "institution_id", "message_id", "description", "amount", "type", "date", "source", "category", "created_at", "updated_at"}
+	columns := []string{"id", "account_id", "institution_id", "message_id", "notification_id", "description", "amount", "type", "date", "source", "category", "created_at", "updated_at"}
 	rows := pgxmock.NewRows(columns).
-		AddRow("mov1", "acc1", &instID, &messaID, &desc, amount, "expense", &date, &source, cat, &now, &now)
+		AddRow("mov1", "acc1", &instID, &messaID, &notificaaationID, &desc, amount, "expense", &date, &source, cat, &now, &now)
 
 	mock.ExpectQuery(`SELECT (.+) FROM movements WHERE id = \$1 AND account_id = \$2`).
 		WithArgs("mov1", "acc1").
@@ -140,11 +143,11 @@ func TestGetMovementsByAccountID(t *testing.T) {
 		AddRow("mov1", "acc1", &instID1, &notiID1, &messaID1, &desc1, amount1, "expense", &date1, &source1, cat1, &now, &now).
 		AddRow("mov2", "acc1", &instID2, &notiID2, &messaID2, &desc2, amount2, "income", &date2, &source2, cat2, &now, &now)
 
-	mock.ExpectQuery(`SELECT (.+) FROM movements WHERE account_id = \$1.*LIMIT \$2 OFFSET \$3`).
-		WithArgs("acc1", 10, 1).
+	mock.ExpectQuery(`SELECT (.+) FROM movements WHERE account_id = \$1 AND \(\$2::text\[\] IS NULL OR institution_id = ANY\(\$2\)\) ORDER BY date DESC LIMIT \$3 OFFSET \$4`).
+		WithArgs("acc1", pgxmock.AnyArg(), 1, 10).
 		WillReturnRows(rows)
 
-	movements, err := repo.GetMovementsByAccountID(context.Background(), "acc1", 10, 1)
+	movements, err := repo.GetMovementsByAccountID(context.Background(), "acc1", []string{}, 1, 10)
 	c.NoError(err)
 
 	c.Len(movements, 2)

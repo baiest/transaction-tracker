@@ -29,8 +29,8 @@ func (m *MockMovementRepository) GetMovementByID(ctx context.Context, id string,
 }
 
 // GetMovementsByAccountID simulates retrieving movements by account ID.
-func (m *MockMovementRepository) GetMovementsByAccountID(ctx context.Context, accountID string, limit int, offset int) ([]*domain.Movement, error) {
-	args := m.Called(ctx, accountID, limit, offset)
+func (m *MockMovementRepository) GetMovementsByAccountID(ctx context.Context, accountID string, institutionIDs []string, limit int, offset int) ([]*domain.Movement, error) {
+	args := m.Called(ctx, accountID, institutionIDs, limit, offset)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
