@@ -11,6 +11,7 @@ import type {
   MovementMonth,
   MovementYear
 } from "@/core/entities/Movement";
+import { cn } from "@/utils/styles";
 
 type MovementsTotalTypes = "totalIncome" | "totalExpense" | "balance";
 type MovementTypes = "income" | "outcome";
@@ -30,10 +31,12 @@ export default function Home() {
     year,
     month,
     timeSelected,
+    institutionsSelected,
     allYearsRaw,
     fetchMomentsByYear,
     fetchMomentsByMonth,
-    fetchAllYearsData
+    fetchAllYearsData,
+    setInstitutionsSelected
   } = useMovementsStore();
 
   const format = useFormatCurrency();
@@ -56,7 +59,8 @@ export default function Home() {
     month,
     fetchMomentsByYear,
     fetchMomentsByMonth,
-    fetchAllYearsData
+    fetchAllYearsData,
+    institutionsSelected
   ]);
 
   const chartData = useMemo(() => {
@@ -77,11 +81,24 @@ export default function Home() {
         balance = getTotal(allYearsRaw, "balance");
         break;
       case "year":
-        rawData = movementsByYear.months;
+        const dataComplete = Array.from(
+          {
+            length: Math.max(...movementsByYear.months.map((m) => m.month ?? 0))
+          },
+          (_, index) => {
+            const mov = movementsByYear.months.find(
+              (m) => m.month === index + 1
+            );
+
+            return mov ? mov : { month: index + 1, income: 0, outcome: 0 };
+          }
+        );
+        rawData = dataComplete;
         labels = MONTHS;
         totalIncome = movementsByYear.totalIncome;
         totalExpense = movementsByYear.totalExpense;
         balance = movementsByYear.balance;
+        console.log(rawData);
         break;
       case "month":
         rawData = movementsByMonth.days;
@@ -144,6 +161,29 @@ export default function Home() {
           {percentage}% Balance / Income Ratio
         </span>
       </div>
+
+      <ul className="flex gap-2">
+        {["davivienda", "manual"].map((i) => (
+          <li
+            key={i}
+            className={cn(
+              "flex items-center p-3 border border-gray-500 rounded-md text-gray-600 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-700",
+              institutionsSelected.includes(i)
+                ? "flex items-center p-3 rounded-md bg-indigo-100 text-indigo-600 font-medium hover:bg-indigo-200 dark:bg-indigo-900 dark:text-indigo-400 dark:hover:bg-indigo-800"
+                : ""
+            )}
+            onClick={() => {
+              setInstitutionsSelected(
+                institutionsSelected.includes(i)
+                  ? institutionsSelected.filter((item) => item !== i)
+                  : [...institutionsSelected, i]
+              );
+            }}
+          >
+            <span className="cursor-pointer">{i}</span>
+          </li>
+        ))}
+      </ul>
 
       <div className="h-full md:col-span-3 dark:bg-gray-800 p-4 rounded">
         <h4 className="text-sm text-gray-400 mb-2">Income vs Expenses</h4>

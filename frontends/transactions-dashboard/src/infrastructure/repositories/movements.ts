@@ -23,19 +23,19 @@ export class MovementsRepository implements IMovementsRepository {
     });
   }
 
-  getMovements(page: number): Promise<MovementsResponse> {
-    return this.client<MovementsResponse>(`/movements?page=${page}&limit=20`);
+  getMovements(page: number, intitutionIDs: string[]): Promise<MovementsResponse> {
+    return this.client<MovementsResponse>(`/movements?page=${page}&limit=20&institution_ids=${intitutionIDs.join(",")}`);
   }
 
-  getMovementsByYear(year: number): Promise<MovementByYear> {
-    return this.client<MovementByYear>(`/movements/years/${year}`);
+  getMovementsByYear(year: number, intitutionIDs: string[]): Promise<MovementByYear> {
+    return this.client<MovementByYear>(`/movements/years/${year}?institution_ids=${intitutionIDs.join(",")}`);
   }
 
-  getMovementsByMonth(year: number, month: number): Promise<MovementByMonth> {
+  getMovementsByMonth(year: number, month: number, intitutionIDs: string[]): Promise<MovementByMonth> {
     month += 1;
 
     return this.client<MovementByMonth>(
-      `/movements/years/${year}/months/${month}`
+      `/movements/years/${year}/months/${month}?institution_ids=${intitutionIDs.join(",")}`
     );
   }
 }

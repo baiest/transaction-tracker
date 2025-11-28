@@ -29,6 +29,7 @@ export interface MovementRequest {
 }
 
 export interface MovementYear {
+  month?: number;
   income: number;
   outcome: number;
 }
@@ -55,10 +56,17 @@ export interface MovementByMonth {
 
 export interface IMovementsRepository {
   createMovement: (movement: MovementRequest) => Promise<Movement>;
-  getMovements: (page: number) => Promise<MovementsResponse>;
-  getMovementsByYear: (year: number) => Promise<MovementByYear>;
+  getMovements: (
+    page: number,
+    institutionIDs: string[]
+  ) => Promise<MovementsResponse>;
+  getMovementsByYear: (
+    year: number,
+    institutionIDs: string[]
+  ) => Promise<MovementByYear>;
   getMovementsByMonth: (
     year: number,
-    month: number
+    month: number,
+    institutionIDs: string[]
   ) => Promise<MovementByMonth>;
 }
