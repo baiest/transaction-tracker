@@ -12,15 +12,15 @@ export class GetMovements {
     }
   }
 
-  async excecute(page = 0): Promise<Movement[]> {
+  async excecute(page = 0, institutionIDs: string[]): Promise<Movement[]> {
     this.validatePage(page);
 
-    const data = await this.repository.getMovements(page);
+    const data = await this.repository.getMovements(page, institutionIDs);
 
     this.page = data.page;
     this.totalPages = data.totalPages;
 
-    return (await this.repository.getMovements(page)).movements.map((m) => ({
+    return data.movements.map((m) => ({
       ...m,
       date: new Date(m.date)
     }));

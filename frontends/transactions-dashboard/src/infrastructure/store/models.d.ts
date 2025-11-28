@@ -9,6 +9,7 @@ export type Time = "all_years" | "year" | "month";
 
 export interface MovementsStore {
   totalPages: numebr;
+  institutionsSelected: string[];
   movements: Movement[];
   movementsByYear: MovementByYear;
   movementsByMonth: MovementByMonth;
@@ -19,6 +20,7 @@ export interface MovementsStore {
   isLoading: boolean;
   error: string | null;
 
+  setInstitutionsSelected: (institutions: string[]) => void;
   setYear: (year: number) => void;
   setMonth: (month: number) => void;
   setTimeSelected: (value: Time) => void;
@@ -26,5 +28,5 @@ export interface MovementsStore {
   fetchMomentsByMonth: (year: number, month: number) => Promise<void>;
   fetchAllYearsData: (years: number[]) => Promise<void>;
   fetchMovements: (page: number) => Promise<void>;
-  createMovement: (movement: MovementRequest) => Promise<void>
+  createMovement: (movement: MovementRequest) => Promise<void>;
 }

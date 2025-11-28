@@ -17,17 +17,22 @@ export class GetMovementsByYear {
     }
   }
 
-  async excecute(years: number[]): Promise<MovementByYear[]> {
+  async excecute(
+    years: number[],
+    institutionIDs: string[]
+  ): Promise<MovementByYear[]> {
     years.forEach((y) => {
       this.validateYear(y);
     });
 
     if (years.length === 1) {
-      return [await this.repository.getMovementsByYear(years[0])];
+      return [
+        await this.repository.getMovementsByYear(years[0], institutionIDs)
+      ];
     }
 
     const data = await Promise.all(
-      years.map((y) => this.repository.getMovementsByYear(y))
+      years.map((y) => this.repository.getMovementsByYear(y, institutionIDs))
     );
 
     const validData = data.map((d: MovementByYear | null | undefined) =>

@@ -23,13 +23,14 @@ export class GetMovementsByMonth {
     }
   }
 
-  async excecute(year: number, month: number): Promise<MovementByMonth> {
+  async excecute(year: number, month: number, institutionIDs: string[]): Promise<MovementByMonth> {
     this.validateYear(year);
     this.validateMonth(month);
 
     const movementsByMonth = await this.repository.getMovementsByMonth(
       year,
-      month
+      month,
+      institutionIDs
     );
 
     let currentIndex = 0;
