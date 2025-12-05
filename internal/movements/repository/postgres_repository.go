@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 	"transaction-tracker/internal/movements/domain"
 
@@ -37,6 +38,8 @@ func (r *postgresRepository) CreateMovement(ctx context.Context, movement *domai
 
 	movement.CreatedAt = now
 	movement.UpdatedAt = now
+
+	fmt.Println(movement)
 
 	query := `INSERT INTO movements (
 	id,
